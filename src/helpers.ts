@@ -14,3 +14,5 @@ export const convertNumberArrToWGLSLVec = (arr: number[]): string => {
 
   return `${vecWGLSLType}(${arr.map(castNumberToWGLSLFloat).join(', ')})`
 }
+
+export const lerp = (a: number, b: number, t: number) => a + (b - a) * t

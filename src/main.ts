@@ -1,45 +1,12 @@
-import { castNumberToWGLSLFloat, convertNumberArrToWGLSLVec } from './helpers'
-import {
-  IndexBuffer,
-  VertexBuffer,
-  Geometry,
-  Mesh,
-  GeometryUtils,
-  PerspectiveCamera,
-  Texture,
-  CameraController,
-  Sampler,
-} from './lib/hwoa-rang-gpu'
+import { DEPTH_FORMAT } from './constants'
+import { VolumeSettings } from './interfaces'
+import { PerspectiveCamera, CameraController } from './lib/hwoa-rang-gpu'
+import MetaballRenderer from './metaball-renderer'
+import { ProjectionUniforms, ViewUniforms } from './shaders/metaball'
 
-import { makeFloorTexture } from './make-floor-texture'
-
-const SAMPLE_COUNT = 4
-const FLOOR_SIZE = 10
-const FLOOR_TEXTURE_SIZE = 1024
-const FOG_NEAR = 0.1
-const FOG_FAR = 10
-const BACKGROUND_COLOR = [0.1, 0.1, 0.1, 1.0]
-
-// Need WebGL to obtain GPU max anisotropy levels
-// WebGPU currently does not provide a way to get it
-const _c = document.createElement('canvas')
-const __gl = _c.getContext('webgl2')!
-const anisotropyExt =
-  __gl.getExtension('EXT_texture_filter_anisotropic') ||
-  __gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
-  __gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
-
-const MAX_ANISOTROPY = __gl.getParameter(
-  anisotropyExt.MAX_TEXTURE_MAX_ANISOTROPY_EXT,
-)
-
+import WebGPURenderer from './webgpu-renderer'
 ;(async () => {
-  const canvas = document.createElement('canvas')
-  canvas.width = innerWidth * devicePixelRatio
-  canvas.height = innerHeight * devicePixelRatio
-  canvas.style.setProperty('width', `${innerWidth}px`)
-  canvas.style.setProperty('height', `${innerHeight}px`)
-  document.body.appendChild(canvas)
+  let oldTime = 0
 
   const adapter = await navigator.gpu?.requestAdapter()
 
@@ -48,176 +15,191 @@ const MAX_ANISOTROPY = __gl.getParameter(
     return
   }
 
-  const device = await adapter?.requestDevice()
-  const context = canvas.getContext('webgpu')
-
-  if (!context) {
-    //
-    return
-  }
-
-  const presentationFormat = context.getPreferredFormat(adapter)
-  // const primitiveType = 'triangle-list'
-  // const presentationSize = [canvas.width, canvas.height]
-
-  context.configure({
-    device,
-    format: presentationFormat,
-  })
-
   const perspCamera = new PerspectiveCamera(
     (45 * Math.PI) / 180,
-    canvas.width / canvas.height,
+    innerWidth / innerHeight,
     0.1,
     20,
   )
-    .setPosition({ x: 0.81, y: 0.31, z: 3.91 })
+    .setPosition({ x: 5, y: 5, z: 5 })
     .lookAt([0, 0, 0])
     .updateViewMatrix()
+    .updateProjectionMatrix()
 
   new CameraController(perspCamera, document.body, false, 0.1).lookAt([
     0, 0.5, 0,
   ])
 
-  const textureDepth = new Texture(device, 'texture_depth').fromDefinition({
-    size: [canvas.width, canvas.height, 1],
-    sampleCount: SAMPLE_COUNT,
-    format: 'depth24plus',
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
+  const renderer = new WebGPURenderer(adapter)
+  renderer.devicePixelRatio = devicePixelRatio
+  renderer.outputSize = [innerWidth, innerHeight]
+  document.body.appendChild(renderer.canvas)
+  await renderer.init()
+
+  renderer.projectionUBO
+    .updateUniform('matrix', perspCamera.projectionMatrix as Float32Array)
+    .updateUniform('outputSize', new Float32Array([innerWidth, innerHeight]))
+    .updateUniform('zNear', new Float32Array([perspCamera.near]))
+    .updateUniform('zFar', new Float32Array([perspCamera.far]))
+  renderer.viewUBO
+    .updateUniform('matrix', perspCamera.viewMatrix as Float32Array)
+    .updateUniform('position', new Float32Array(perspCamera.position))
+
+  const volume: VolumeSettings = {
+    xMin: -1.75,
+    yMin: 0,
+    zMin: -1.75,
+    width: 75,
+    height: 70,
+    depth: 75,
+    xStep: 0.05,
+    yStep: 0.05,
+    zStep: 0.05,
+    isoLevel: 80,
+  }
+
+  const metaballs = new MetaballRenderer(renderer, volume)
+
+  const gridVertexBuffer = renderer.device.createBuffer({
+    label: 'grid vertex buffer',
+    size: 4 * 3 * Float32Array.BYTES_PER_ELEMENT,
+    usage: GPUBufferUsage.VERTEX,
+    mappedAtCreation: true,
   })
-  const renderTexture = new Texture(device, 'render_texture').fromDefinition({
-    size: [canvas.width, canvas.height],
-    sampleCount: SAMPLE_COUNT,
-    format: presentationFormat,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  })
-  const floorTextureBitmap: ImageBitmap = await createImageBitmap(
-    makeFloorTexture(FLOOR_TEXTURE_SIZE),
-    {
-      resizeWidth: FLOOR_TEXTURE_SIZE,
-      resizeHeight: FLOOR_TEXTURE_SIZE,
+  const gridVertices = new Float32Array(gridVertexBuffer.getMappedRange())
+  const gridSize = 10
+  gridVertices[0] = -gridSize / 2
+  gridVertices[1] = 0
+  gridVertices[2] = 0
+
+  gridVertices[3] = gridSize / 2
+  gridVertices[4] = 0
+  gridVertices[5] = 0
+
+  gridVertices[6] = 0
+  gridVertices[7] = 0
+  gridVertices[8] = -gridSize / 2
+
+  gridVertices[9] = 0
+  gridVertices[10] = 0
+  gridVertices[11] = gridSize / 2
+  gridVertexBuffer.unmap()
+
+  const gridRenderPipeline = await renderer.device.createRenderPipelineAsync({
+    label: 'grid render pipeline',
+    layout: renderer.device.createPipelineLayout({
+      bindGroupLayouts: [renderer.bindGroupLayouts.frame],
+    }),
+    vertex: {
+      entryPoint: 'main',
+      module: renderer.device.createShaderModule({
+        label: 'grid vertex shader',
+        code: `
+          ${ProjectionUniforms}
+          ${ViewUniforms}
+
+          struct Inputs {
+            @location(0) position: vec3<f32>;
+          }
+
+          struct VertexOutput {
+            @builtin(position) position: vec4<f32>;
+          }
+
+          @stage(vertex)
+          fn main(input: Inputs) -> VertexOutput {
+            var output: VertexOutput;
+            output.position = projection.matrix * view.matrix * vec4<f32>(input.position, 1.0);
+            return output;
+          }
+        `,
+      }),
+      buffers: [
+        {
+          arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+          attributes: [
+            {
+              format: 'float32x3',
+              offset: 0,
+              shaderLocation: 0,
+            },
+          ],
+        },
+      ],
     },
-  )
-
-  const floorTexture = new Texture(device, 'floor_texture').fromImageBitmap(
-    floorTextureBitmap,
-  )
-  const sampler = new Sampler(device, 'my_sampler', 'filtering', 'sampler', {
-    maxAnisotropy: MAX_ANISOTROPY,
-    minFilter: 'linear',
-    magFilter: 'linear',
-    mipmapFilter: 'linear',
-  })
-
-  const {
-    // width,
-    // height,
-    vertexCount,
-    vertexStride,
-    interleavedArray,
-    indicesArray,
-  } = GeometryUtils.createInterleavedPlane({
-    width: FLOOR_SIZE,
-    height: FLOOR_SIZE,
-  })
-
-  const indexBuffer = new IndexBuffer(device, indicesArray)
-  const interleavedBuffer = new VertexBuffer(
-    device,
-    0,
-    interleavedArray,
-    vertexStride * Float32Array.BYTES_PER_ELEMENT,
-  )
-    .addAttribute(
-      'position',
-      0 * Float32Array.BYTES_PER_ELEMENT,
-      3 * Float32Array.BYTES_PER_ELEMENT,
-      'float32x3',
-    )
-    .addAttribute(
-      'uv',
-      3 * Float32Array.BYTES_PER_ELEMENT,
-      2 * Float32Array.BYTES_PER_ELEMENT,
-      'float32x2',
-    )
-
-  const floorGeometry = new Geometry(device)
-  floorGeometry.addIndexBuffer(indexBuffer).addVertexBuffer(interleavedBuffer)
-
-  console.log(interleavedBuffer)
-
-  const floorMesh = new Mesh(device, {
-    geometry: floorGeometry,
-    uniforms: {},
+    fragment: {
+      module: renderer.device.createShaderModule({
+        label: 'grid fragment shader',
+        code: `
+          struct Output {
+            @location(0) Color: vec4<f32>;
+          }
+          @stage(fragment)
+          fn main() -> Output {
+            var output: Output;
+            output.Color = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+            return output;
+          }
+        `,
+      }),
+      entryPoint: 'main',
+      targets: [
+        {
+          format: renderer.presentationFormat,
+        },
+      ],
+    },
+    primitive: {
+      topology: 'line-list',
+    },
+    depthStencil: {
+      format: DEPTH_FORMAT,
+      depthWriteEnabled: true,
+      depthCompare: 'less',
+    },
     multisample: {
-      count: SAMPLE_COUNT,
-    },
-    textures: [floorTexture],
-    samplers: [sampler],
-    vertexShaderSource: {
-      main: `
-        var worldPosition: vec4<f32> = transform.modelMatrix *
-                                       input.position;
-
-        output.Position = transform.projectionMatrix *
-                          transform.viewMatrix *
-                          worldPosition;
-        
-
-        output.position = worldPosition;
-        output.uv = input.uv;
-      `,
-    },
-    fragmentShaderSource: {
-      head: `
-        let FLOOR_SIZE_HALF: f32 = ${castNumberToWGLSLFloat(FLOOR_SIZE * 0.5)};
-        let FOG_NEAR: f32 = ${castNumberToWGLSLFloat(FOG_NEAR)};
-        let FOG_FAR: f32 = ${castNumberToWGLSLFloat(FOG_FAR)};
-        let BACKGROUND_COLOR = ${convertNumberArrToWGLSLVec(BACKGROUND_COLOR)};
-      `,
-      main: `
-        output.Color = textureSample(floor_texture, my_sampler, vec2<f32>(input.uv.x, 1.0 - input.uv.y));
-
-        var distanceCenterNorm: f32 = clamp(distance(vec4<f32>(0.0), input.position) / FLOOR_SIZE_HALF, 0.0, 1.0);
-        output.Color = mix(output.Color, BACKGROUND_COLOR, distanceCenterNorm);
-
-        var fogDepth: f32 = -input.position.z;
-        var fogAmount: f32 = smoothStep(FOG_NEAR, FOG_FAR, fogDepth);
-        output.Color = mix(output.Color, BACKGROUND_COLOR, fogAmount);
-      `,
+      count: 4,
     },
   })
-
-  floorMesh.setRotation({ x: -Math.PI / 2 }).updateWorldMatrix()
 
   requestAnimationFrame(renderFrame)
 
-  function renderFrame() {
+  function renderFrame(time: DOMHighResTimeStamp) {
+    time /= 1000
+    const dt = time - oldTime
+    oldTime = time
+
     requestAnimationFrame(renderFrame)
 
-    const commandEncoder = device.createCommandEncoder()
-    // const textureView = context?.getCurrentTexture().createView()
+    renderer.viewUBO.updateUniform(
+      'matrix',
+      perspCamera.viewMatrix as Float32Array,
+    )
+    renderer.viewUBO.updateUniform('time', new Float32Array([time]))
+
+    renderer.onRender()
+
+    const commandEncoder = renderer.device.createCommandEncoder()
+
+    const computePass = commandEncoder.beginComputePass()
+    metaballs.updateSim(computePass, time, dt)
+    computePass.endPass()
+
     const renderPass = commandEncoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: renderTexture.get().createView(),
-          resolveTarget: context?.getCurrentTexture().createView(),
-          loadValue: BACKGROUND_COLOR,
-          storeOp: 'store',
-        },
-      ],
-      depthStencilAttachment: {
-        view: textureDepth.get().createView(),
-        depthLoadValue: 1,
-        depthStoreOp: 'store',
-        stencilLoadValue: 0,
-        stencilStoreOp: 'store',
-      },
+      label: 'draw default framebuffer',
+      colorAttachments: [renderer.colorAttachment],
+      depthStencilAttachment: renderer.depthAndStencilAttachment,
     })
 
-    floorMesh.render(renderPass, perspCamera)
+    renderPass.setPipeline(gridRenderPipeline)
+    renderPass.setBindGroup(0, renderer.bindGroups.frame)
+    renderPass.setVertexBuffer(0, gridVertexBuffer)
+    renderPass.draw(4)
+
+    metaballs.render(renderPass)
 
     renderPass.endPass()
-    device.queue.submit([commandEncoder.finish()])
+
+    renderer.device.queue.submit([commandEncoder.finish()])
   }
 })()
