@@ -10,3 +10,10 @@ export interface VolumeSettings {
   depth: number
   isoLevel: number
 }
+
+export interface MetaballPos {
+  x: number
+  y: number
+  z: number
+  speed: number
+}

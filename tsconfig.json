@@ -5,7 +5,7 @@
     "module": "ESNext",
     "lib": ["ESNext", "DOM"],
     "moduleResolution": "Node",
-    "strict": true,
+    "strict": false,
     "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
@@ -13,10 +13,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "typeRoots": [
-      "node",
-      "./node_modules/@webgpu/types"
-    ]
+    "typeRoots": ["node", "./node_modules/@webgpu/types"]
   },
-  "include": ["./src"]
+  "include": ["./src", "vite.config.js"]
 }

@@ -1,10 +1,14 @@
+import { WorkgroupSize } from './lib/hwoa-rang-gpu'
+import { MetaballPos, VolumeSettings } from './interfaces'
+
 import {
   DEPTH_FORMAT,
   MAX_METABALLS,
   METABALLS_COMPUTE_WORKGROUP_SIZE,
   SAMPLE_COUNT,
 } from './constants'
-import { VolumeSettings } from './interfaces'
+
+import getClockPositions from './get-clock-positions'
 
 import {
   MarchingCubesEdgeTable,
@@ -47,7 +51,8 @@ export default class MetaballRenderer {
   numBlob = MAX_METABALLS
   indexCount: number
 
-  ballPositions: { x: number; y: number; z: number; speed: number }[] = []
+  clockBallPositions: MetaballPos[] = []
+  ballPositions: MetaballPos[] = []
 
   constructor(renderer: WebGPURenderer, volume: VolumeSettings) {
     this.renderer = renderer
@@ -110,6 +115,7 @@ export default class MetaballRenderer {
 
     const marchingCubeCells =
       (volume.width - 1) * (volume.height - 1) * (volume.depth - 1)
+    console.log(marchingCubeCells)
     const vertexBufferSize =
       Float32Array.BYTES_PER_ELEMENT * 3 * 12 * marchingCubeCells
     const indexBufferSize =
@@ -145,12 +151,44 @@ export default class MetaballRenderer {
       label: 'metaballs indirect draw buffer',
     })
 
-    this.ballPositions = new Array(MAX_METABALLS).fill(null).map((_, i) => ({
-      x: (Math.random() * 2 - 1) * 3,
-      y: 0,
-      z: (Math.random() * 2 - 1) * 3,
-      speed: Math.random(),
-    }))
+    // this.ballPositions = new Array(MAX_METABALLS).fill(null).map((_, i) => ({
+    //   x: (Math.random() * 2 - 1) * 3,
+    //   y: 0,
+    //   z: (Math.random() * 2 - 1) * 3,
+    //   speed: Math.random(),
+    // }))
+    const reshuffleClock = (populateBallPositions = false) => {
+      this.clockBallPositions = []
+      const clockPositions = getClockPositions()
+      for (let i = 0; i < MAX_METABALLS; i++) {
+        const clockPos = clockPositions[i]
+        if (clockPos) {
+          const ball = {
+            x: clockPos.x * 0.0075,
+            y: clockPos.y * 0.01 + 1,
+            z: (Math.random() * 2 - 1) * 0.1,
+            speed: 0,
+          }
+          this.clockBallPositions.push(ball)
+        } else {
+          const rand =
+            this.clockBallPositions[
+              Math.floor(Math.random() * this.clockBallPositions.length)
+            ]
+          this.clockBallPositions.push({
+            x: rand.x,
+            y: rand.y,
+            z: rand.z,
+            speed: rand.speed,
+          })
+        }
+      }
+      if (populateBallPositions) {
+        this.ballPositions = this.clockBallPositions
+      }
+    }
+    reshuffleClock(true)
+    setInterval(reshuffleClock, 1000)
 
     this.init()
   }
@@ -242,7 +280,7 @@ export default class MetaballRenderer {
       await this.renderer.device.createRenderPipelineAsync({
         label: 'metaball rendering pipeline',
         layout: this.renderer.device.createPipelineLayout({
-          bindGroupLayouts: [this.renderer.bindGroupLayouts.frame],
+          bindGroupLayouts: [this.renderer.bindGroups.frame.getLayout()],
         }),
         vertex: {
           entryPoint: 'main',
@@ -305,24 +343,30 @@ export default class MetaballRenderer {
   ): this {
     const numblobs = MAX_METABALLS
     const subtract = 12
-    const strength = (5 / ((Math.sqrt(numblobs) - 1) / 4 + 1)) * 2
+    const strength = (5 / ((Math.sqrt(numblobs) - 1) / 4 + 1)) * 1
 
     this.metaballArrayHeader[0] = MAX_METABALLS
 
-    const speed = time * 2
+    const speed = timeDelta * 10
 
     for (let i = 0; i < MAX_METABALLS; i++) {
-      const position = this.ballPositions[i]
-      position.y += timeDelta * position.speed
-      position.x =
-        Math.cos(time + position.speed + i) * Math.sin(position.y * 0.2) * 3.4
-      position.z =
-        Math.sin(time + position.speed + i) * Math.sin(position.y * 0.2) * 3.4
-      if (position.y >= 4) {
-        position.x = 0
-        position.z = 0
-        position.y = 0
-      }
+      const clockPos = this.clockBallPositions[i]
+      const pos = this.ballPositions[i]
+      const distX = clockPos.x - pos.x
+      pos.x += distX * speed
+      pos.y += (clockPos.y - pos.y) * speed
+
+      pos.z += (clockPos.z - pos.z) * speed
+      // position.y += timeDelta * position.speed
+      // position.x =
+      //   Math.cos(time + position.speed + i) * Math.sin(position.y * 0.2) * 3.4
+      // position.z =
+      //   Math.sin(time + position.speed + i) * Math.sin(position.y * 0.2) * 3.4
+      // if (position.y >= 4) {
+      //   position.x = 0
+      //   position.z = 0
+      //   position.y = 0
+      // }
     }
 
     for (let i = 0; i < numblobs; i++) {
@@ -347,7 +391,7 @@ export default class MetaballRenderer {
       this.indirectRenderArray,
     )
 
-    const dispatchSize: [number, number, number] = [
+    const dispatchSize: WorkgroupSize = [
       this.volume.width / METABALLS_COMPUTE_WORKGROUP_SIZE[0],
       this.volume.height / METABALLS_COMPUTE_WORKGROUP_SIZE[1],
       this.volume.depth / METABALLS_COMPUTE_WORKGROUP_SIZE[2],
@@ -374,7 +418,8 @@ export default class MetaballRenderer {
       return this
     }
     renderPass.setPipeline(this.renderMetaballsPipeline)
-    renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
+    // renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
+    this.renderer.bindGroups.frame.bind(renderPass)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setVertexBuffer(1, this.normalBuffer)
     renderPass.setIndexBuffer(this.indexBuffer, 'uint32')

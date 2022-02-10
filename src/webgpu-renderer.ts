@@ -1,5 +1,5 @@
 import { BACKGROUND_COLOR, DEPTH_FORMAT, SAMPLE_COUNT } from './constants'
-import UBOBuffer from './ubo-buffer'
+import { BindGroup, Sampler, UniformBuffer } from './lib/hwoa-rang-gpu'
 
 export default class WebGPURenderer {
   adapter: GPUAdapter
@@ -9,15 +9,15 @@ export default class WebGPURenderer {
   canvas = document.createElement('canvas')
   context = this.canvas.getContext('webgpu')!
 
-  bindGroupLayouts: { [key: string]: GPUBindGroupLayout } = {}
-  bindGroups: { [key: string]: GPUBindGroup } = {}
+  bindGroups: { [key: string]: BindGroup } = {}
 
   device!: GPUDevice
   colorAttachment!: GPURenderPassColorAttachment
   depthAndStencilAttachment!: GPURenderPassDepthStencilAttachment
 
-  projectionUBO!: UBOBuffer
-  viewUBO!: UBOBuffer
+  projectionUBO!: UniformBuffer
+  viewUBO!: UniformBuffer
+  defaultSampler: Sampler
 
   get presentationFormat() {
     return this.context.getPreferredFormat(this.adapter)
@@ -43,29 +43,42 @@ export default class WebGPURenderer {
   async init() {
     this.device = await this.adapter.requestDevice()
 
-    this.projectionUBO = new UBOBuffer(this.device, {
-      matrix: {
-        type: 'mat4x4<f32>',
-      },
-      outputSize: {
-        type: 'vec2<f32>',
-      },
-      zNear: {
-        type: 'f32',
-      },
-      zFar: {
-        type: 'f32',
+    this.defaultSampler = new Sampler(
+      this.device,
+      'mySampler',
+      'filtering',
+      'sampler',
+    )
+
+    this.projectionUBO = new UniformBuffer(this.device, {
+      name: 'ProjectionUniforms',
+      uniforms: {
+        matrix: {
+          type: 'mat4x4<f32>',
+        },
+        outputSize: {
+          type: 'vec2<f32>',
+        },
+        zNear: {
+          type: 'f32',
+        },
+        zFar: {
+          type: 'f32',
+        },
       },
     })
-    this.viewUBO = new UBOBuffer(this.device, {
-      matrix: {
-        type: 'mat4x4<f32>',
-      },
-      position: {
-        type: 'vec3<f32>',
-      },
-      time: {
-        type: 'f32',
+    this.viewUBO = new UniformBuffer(this.device, {
+      name: 'ViewUniforms',
+      uniforms: {
+        matrix: {
+          type: 'mat4x4<f32>',
+        },
+        position: {
+          type: 'vec3<f32>',
+        },
+        time: {
+          type: 'f32',
+        },
       },
     })
 
@@ -108,46 +121,10 @@ export default class WebGPURenderer {
       stencilStoreOp: 'discard',
     }
 
-    this.bindGroupLayouts.frame = this.device.createBindGroupLayout({
-      label: 'frame-bind-group-layout',
-      entries: [
-        {
-          binding: 0, // projection uniforms
-          visibility:
-            GPUShaderStage.VERTEX |
-            GPUShaderStage.FRAGMENT |
-            GPUShaderStage.COMPUTE,
-          buffer: {},
-        },
-        {
-          binding: 1, // view uniforms
-          visibility:
-            GPUShaderStage.VERTEX |
-            GPUShaderStage.FRAGMENT |
-            GPUShaderStage.COMPUTE,
-          buffer: {},
-        },
-      ],
-    })
-
-    this.bindGroups.frame = this.device.createBindGroup({
-      label: 'frame-bind-group',
-      layout: this.bindGroupLayouts.frame,
-      entries: [
-        {
-          binding: 0,
-          resource: {
-            buffer: this.projectionUBO.buffer,
-          },
-        },
-        {
-          binding: 1,
-          resource: {
-            buffer: this.viewUBO.buffer,
-          },
-        },
-      ],
-    })
+    this.bindGroups.frame = new BindGroup(this.device, 0)
+    this.bindGroups.frame.addUBO(this.projectionUBO)
+    this.bindGroups.frame.addUBO(this.viewUBO)
+    this.bindGroups.frame.init()
   }
 
   onRender() {
