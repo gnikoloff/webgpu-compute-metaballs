@@ -1,4 +1,9 @@
-import { WorkgroupSize } from './lib/hwoa-rang-gpu'
+import {
+  BindGroup,
+  SceneObject,
+  UniformBuffer,
+  WorkgroupSize,
+} from './lib/hwoa-rang-gpu'
 import { MetaballPos, VolumeSettings } from './interfaces'
 
 import {
@@ -8,7 +13,7 @@ import {
   SAMPLE_COUNT,
 } from './constants'
 
-import getClockPositions from './get-clock-positions'
+// import getClockPositions from './get-clock-positions'
 
 import {
   MarchingCubesEdgeTable,
@@ -24,7 +29,7 @@ import {
 
 import WebGPURenderer from './webgpu-renderer'
 
-export default class MetaballRenderer {
+export default class MetaballRenderer extends SceneObject {
   renderer: WebGPURenderer
   volume: VolumeSettings
 
@@ -42,6 +47,8 @@ export default class MetaballRenderer {
 
   computeMetaballsBindGroup!: GPUBindGroup
   computeMarchingCubesBindGroup!: GPUBindGroup
+  modelUBO: UniformBuffer
+  modelBindGroup: BindGroup
 
   indirectRenderArray: Uint32Array
   metaballArray: ArrayBuffer
@@ -51,10 +58,10 @@ export default class MetaballRenderer {
   numBlob = MAX_METABALLS
   indexCount: number
 
-  clockBallPositions: MetaballPos[] = []
   ballPositions: MetaballPos[] = []
 
   constructor(renderer: WebGPURenderer, volume: VolumeSettings) {
+    super()
     this.renderer = renderer
     this.volume = volume
 
@@ -151,44 +158,33 @@ export default class MetaballRenderer {
       label: 'metaballs indirect draw buffer',
     })
 
-    // this.ballPositions = new Array(MAX_METABALLS).fill(null).map((_, i) => ({
-    //   x: (Math.random() * 2 - 1) * 3,
-    //   y: 0,
-    //   z: (Math.random() * 2 - 1) * 3,
-    //   speed: Math.random(),
-    // }))
-    const reshuffleClock = (populateBallPositions = false) => {
-      this.clockBallPositions = []
-      const clockPositions = getClockPositions()
-      for (let i = 0; i < MAX_METABALLS; i++) {
-        const clockPos = clockPositions[i]
-        if (clockPos) {
-          const ball = {
-            x: clockPos.x * 0.0075,
-            y: clockPos.y * 0.01 + 1,
-            z: (Math.random() * 2 - 1) * 0.1,
-            speed: 0,
-          }
-          this.clockBallPositions.push(ball)
-        } else {
-          const rand =
-            this.clockBallPositions[
-              Math.floor(Math.random() * this.clockBallPositions.length)
-            ]
-          this.clockBallPositions.push({
-            x: rand.x,
-            y: rand.y,
-            z: rand.z,
-            speed: rand.speed,
-          })
-        }
-      }
-      if (populateBallPositions) {
-        this.ballPositions = this.clockBallPositions
-      }
-    }
-    reshuffleClock(true)
-    setInterval(reshuffleClock, 1000)
+    this.ballPositions = new Array(MAX_METABALLS).fill(null).map((_, i) => ({
+      x: (Math.random() * 2 - 1) * 0.1,
+      y: (Math.random() * 2 - 1) * 0.1,
+      z: (Math.random() * 2 - 1) * 0.1,
+      vx: (Math.random() * 2 - 1) * 1,
+      vy: (Math.random() * 2 - 1) * 1,
+      vz: (Math.random() * 2 - 1) * 1,
+      speed: 0.001,
+    }))
+
+    this.modelUBO = new UniformBuffer(this.renderer.device, {
+      name: 'Model',
+      uniforms: {
+        matrix: {
+          type: 'mat4x4<f32>',
+          value: this.worldMatrix as Float32Array,
+        },
+      },
+      debugLabel: 'spaceship model ubo',
+    })
+    this.modelBindGroup = new BindGroup(
+      this.renderer.device,
+      1,
+      'metaball model bind group',
+    )
+    this.modelBindGroup.addUBO(this.modelUBO)
+    this.modelBindGroup.init()
 
     this.init()
   }
@@ -275,12 +271,15 @@ export default class MetaballRenderer {
         },
       ],
     })
-
     this.renderMetaballsPipeline =
       await this.renderer.device.createRenderPipelineAsync({
         label: 'metaball rendering pipeline',
         layout: this.renderer.device.createPipelineLayout({
-          bindGroupLayouts: [this.renderer.bindGroups.frame.getLayout()],
+          label: 'metaball rendering pipeline layout',
+          bindGroupLayouts: [
+            this.renderer.bindGroups.frame.getLayout(),
+            this.modelBindGroup.getLayout(0),
+          ],
         }),
         vertex: {
           entryPoint: 'main',
@@ -341,32 +340,45 @@ export default class MetaballRenderer {
     time: DOMHighResTimeStamp,
     timeDelta: number,
   ): this {
+    this.setRotation({ y: time }).setPosition({ y: 0 }).updateWorldMatrix()
     const numblobs = MAX_METABALLS
     const subtract = 12
-    const strength = (5 / ((Math.sqrt(numblobs) - 1) / 4 + 1)) * 1
+    const strength = (5 / ((Math.sqrt(numblobs) - 1) / 4 + 1)) * 4
 
     this.metaballArrayHeader[0] = MAX_METABALLS
 
-    const speed = timeDelta * 10
+    const speed = timeDelta
 
     for (let i = 0; i < MAX_METABALLS; i++) {
-      const clockPos = this.clockBallPositions[i]
       const pos = this.ballPositions[i]
-      const distX = clockPos.x - pos.x
-      pos.x += distX * speed
-      pos.y += (clockPos.y - pos.y) * speed
 
-      pos.z += (clockPos.z - pos.z) * speed
-      // position.y += timeDelta * position.speed
-      // position.x =
-      //   Math.cos(time + position.speed + i) * Math.sin(position.y * 0.2) * 3.4
-      // position.z =
-      //   Math.sin(time + position.speed + i) * Math.sin(position.y * 0.2) * 3.4
-      // if (position.y >= 4) {
-      //   position.x = 0
-      //   position.z = 0
-      //   position.y = 0
-      // }
+      pos.x += pos.vx * speed
+      pos.y += pos.vy * speed
+      pos.z += pos.vz * speed
+
+      if (pos.x > 1) {
+        pos.x = 1
+        pos.vx *= -1
+      } else if (pos.x < -1) {
+        pos.x = -1
+        pos.vx *= -1
+      }
+
+      if (pos.y > 1.5) {
+        pos.y = 1.5
+        pos.vy *= -1
+      } else if (pos.y < -1.5) {
+        pos.y = -1.5
+        pos.vy *= -1
+      }
+
+      if (pos.z > 1) {
+        pos.z = 1
+        pos.vz *= -1
+      } else if (pos.z < -1) {
+        pos.z = -1
+        pos.vz *= -1
+      }
     }
 
     for (let i = 0; i < numblobs; i++) {
@@ -417,9 +429,10 @@ export default class MetaballRenderer {
     if (!this.renderMetaballsPipeline) {
       return this
     }
+    this.modelUBO.updateUniform('matrix', this.worldMatrix as Float32Array)
     renderPass.setPipeline(this.renderMetaballsPipeline)
-    // renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
     this.renderer.bindGroups.frame.bind(renderPass)
+    this.modelBindGroup.bind(renderPass)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setVertexBuffer(1, this.normalBuffer)
     renderPass.setIndexBuffer(this.indexBuffer, 'uint32')

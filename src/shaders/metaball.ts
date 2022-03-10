@@ -259,6 +259,12 @@ export const METABALLS_VERTEX_SHADER = `
     ${ProjectionUniforms}
     ${ViewUniforms}
 
+    struct ModelUniforms {
+      matrix: mat4x4<f32>;
+    }
+
+    @group(1) @binding(0) var<uniform> model: ModelUniforms;
+
     struct Inputs {
       @location(0) position: vec3<f32>;
       @location(1) normal: vec3<f32>;
@@ -272,7 +278,11 @@ export const METABALLS_VERTEX_SHADER = `
     @stage(vertex)
     fn main(input: Inputs) -> VertexOutput {
       var output: VertexOutput;
-      output.position = projection.matrix * view.matrix * vec4<f32>(input.position, 1.0);
+      output.position = projection.matrix *
+                        view.matrix *
+                        model.matrix *
+                        vec4<f32>(input.position, 1.0);
+
       output.normal = input.normal;
       return output;
     }

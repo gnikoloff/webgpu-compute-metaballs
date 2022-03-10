@@ -21,14 +21,12 @@ import WebGPURenderer from './webgpu-renderer'
     0.1,
     20,
   )
-    .setPosition({ x: 5, y: 5, z: 5 })
+    .setPosition({ x: 0, y: 0, z: -13 })
     .lookAt([0, 0, 0])
     .updateViewMatrix()
     .updateProjectionMatrix()
 
-  new CameraController(perspCamera, document.body, false, 0.1).lookAt([
-    0, 0.5, 0,
-  ])
+  new CameraController(perspCamera, document.body, false, 0.1).lookAt([0, 0, 0])
 
   const renderer = new WebGPURenderer(adapter)
   renderer.devicePixelRatio = devicePixelRatio
@@ -83,7 +81,7 @@ import WebGPURenderer from './webgpu-renderer'
 
     const computePass = commandEncoder.beginComputePass()
     metaballs.updateSim(computePass, time, dt)
-    computePass.endPass()
+    computePass.end()
 
     const renderPass = commandEncoder.beginRenderPass({
       label: 'draw default framebuffer',
@@ -93,9 +91,9 @@ import WebGPURenderer from './webgpu-renderer'
 
     gridHelper.render(renderPass)
     metaballs.render(renderPass)
-    spaceship.update(time).render(renderPass)
+    spaceship.update(time, 0).render(renderPass)
 
-    renderPass.endPass()
+    renderPass.end()
 
     renderer.device.queue.submit([commandEncoder.finish()])
   }

@@ -15,7 +15,7 @@ import {
 
 import WebGPURenderer from './webgpu-renderer'
 
-import gltfModelURL from './assets/SS.gltf'
+import gltfModelURL from './assets/spacestation/SS.glb'
 import {
   SPACESHIP_FRAGMENT_SHADER,
   SPACESHIP_VERTEX_SHADER,
@@ -96,6 +96,9 @@ export default class Spaceship extends SceneObject {
 
           const textures: Texture[] = []
           if (primitive.material) {
+            if (!primitive.material.normalTexture) {
+            }
+
             for (const [key, materialProp] of Object.entries(
               primitive.material,
             )) {
@@ -121,13 +124,20 @@ export default class Spaceship extends SceneObject {
               this.renderer.viewUBO,
               this.modelUBO,
             ],
-            samplers: [this.renderer.defaultSampler],
+            samplers:
+              !!primitive.material?.normalTexture ||
+              !!primitive.material?.emissiveTexture
+                ? [this.renderer.defaultSampler]
+                : [],
             textures,
             vertexShaderSource: {
               main: SPACESHIP_VERTEX_SHADER,
             },
             fragmentShaderSource: {
-              main: SPACESHIP_FRAGMENT_SHADER,
+              main: SPACESHIP_FRAGMENT_SHADER(
+                !!primitive.material?.normalTexture,
+                !!primitive.material?.emissiveTexture,
+              ),
             },
             multisample: {
               count: SAMPLE_COUNT,
@@ -157,12 +167,14 @@ export default class Spaceship extends SceneObject {
     }
 
     initNode(gltf.scenes[0], this)
-    const sc = 4
-    this.setScale({ x: sc, y: sc, z: sc }).updateWorldMatrix()
+    const sc = 2
+    this.setScale({ x: sc, y: sc, z: sc })
+      .setPosition({ z: 3 })
+      .updateWorldMatrix()
   }
 
   update(time: DOMHighResTimeStamp, dt: number): this {
-    this.setRotation({ y: time }).updateWorldMatrix()
+    // this.setRotation({ y: time }).updateWorldMatrix()
     return this
   }
 

@@ -98,12 +98,13 @@ export default class WebGPURenderer {
     this.colorAttachment = {
       view: msaaColorTexture.createView(),
       resolveTarget: undefined,
-      loadValue: {
+      clearValue: {
         r: BACKGROUND_COLOR[0],
         g: BACKGROUND_COLOR[1],
         b: BACKGROUND_COLOR[2],
         a: BACKGROUND_COLOR[3],
       },
+      loadOp: 'clear',
       storeOp: 'discard',
     }
 
@@ -117,8 +118,17 @@ export default class WebGPURenderer {
       view: depthTexture.createView(),
       depthLoadValue: 1,
       depthStoreOp: 'discard',
-      stencilLoadValue: 0,
-      stencilStoreOp: 'discard',
+      // stencilLoadValue: 0,
+      // stencilStoreOp: 'discard',
+
+      // view: depthTexture.createView(),
+      // // depthLoadValue: 1,
+      // depthLoadOp: 'clear',
+      // depthStoreOp: 'discard',
+      // // depthStoreOp: 'discard',
+      // // depthReadOnly: false,
+      // // stencilLoadValue: 0,
+      // // stencilStoreOp: 'discard',
     }
 
     this.bindGroups.frame = new BindGroup(this.device, 0)
