@@ -32,11 +32,12 @@ import {
   SURFACE_SHADER_STRUCT,
 } from './shaders/pbr'
 
-import gltfModelURL from './assets/sponza/Sponza.gltf'
+import gltfModelURL from './assets/sponza/sponza.glb'
 
 const attribNameToShaderNames = new Map([
   ['NORMAL', 'normal'],
   ['POSITION', 'position'],
+  ['TANGENT', 'tangent'],
   ['TEXCOORD_0', 'uv'],
 ])
 
@@ -131,7 +132,7 @@ export default class Spaceship extends SceneObject {
                 ),
               )
             }
-            if (primitive.material.pbrMetallicRoughness) {
+            if (primitive.material.pbrMetallicRoughness.baseColorTexture) {
               textures.push(
                 new Texture(
                   this.renderer.device,
@@ -180,12 +181,20 @@ export default class Spaceship extends SceneObject {
                 worldPosition: {
                   format: 'float32x3',
                 },
+                bitangent: {
+                  format: 'float32x3',
+                },
               },
-              main: SPACESHIP_VERTEX_SHADER,
+              main: SPACESHIP_VERTEX_SHADER({
+                useNormalMap: !!primitive.attributes.TANGENT,
+              }),
             },
             fragmentShaderSource: {
               inputs: {
                 worldPosition: {
+                  format: 'float32x3',
+                },
+                bitangent: {
                   format: 'float32x3',
                 },
               },
@@ -193,11 +202,6 @@ export default class Spaceship extends SceneObject {
                 let PI = ${Math.PI};
                 ${POINT_LIGHT_SHADER_STRUCT}
                 ${SURFACE_SHADER_STRUCT}
-                ${
-                  primitive.material.normalTexture
-                    ? GET_NORMAL_FROM_MAP_PBR_SHADER_FN
-                    : ''
-                }
                 ${DISTRIBUTION_GGX_PBR_SHADER_FN}
                 ${GEOMETRY_SMITH_PBR_SHADER_FN}
                 ${FRESNEL_SCHLICK_PBR_SHADER_FN}
@@ -205,21 +209,24 @@ export default class Spaceship extends SceneObject {
                 ${LIGHT_RADIANCE_PBR_SHADER_FN}
                 ${LINEAR_TO_SRGB_SHADER_FN}
               `,
-              main: SPACESHIP_FRAGMENT_SHADER(
-                primitive.material.pbrMetallicRoughness.baseColorFactor,
-                !!primitive.material.normalTexture,
-                !!primitive.material.pbrMetallicRoughness
-                  .metallicRoughnessTexture,
-              ),
+              main: SPACESHIP_FRAGMENT_SHADER({
+                baseColorFactor:
+                  primitive.material.pbrMetallicRoughness.baseColorFactor,
+                useNormalMap: !!primitive.attributes.TANGENT,
+                useAlbedoTexture:
+                  !!primitive.material.pbrMetallicRoughness.baseColorTexture,
+                useNormalTexture: !!primitive.material.normalTexture,
+                useMetallicRoughnessTexture:
+                  !!primitive.material.pbrMetallicRoughness
+                    .metallicRoughnessTexture,
+              }),
             },
             multisample: {
               count: SAMPLE_COUNT,
             },
           })
-          if (
-            primitive.material.pbrMetallicRoughness.baseColorTexture.texture
-              .source.mimeType === 'image/png'
-          ) {
+          console.log(primitive)
+          if (primitive.material.alphaMode === 'MASK') {
             currentNode.setParent(transparentRootNode)
           } else {
             currentNode.setParent(sceneNode)

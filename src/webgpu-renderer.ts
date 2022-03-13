@@ -46,7 +46,7 @@ export default class WebGPURenderer {
 
     this.defaultSampler = new Sampler(
       this.device,
-      'mySampler',
+      'defaultSampler',
       'filtering',
       'sampler',
       {
