@@ -44,6 +44,17 @@ export default class WebGPURenderer {
   async init() {
     this.device = await this.adapter.requestDevice()
 
+    // HACK: WebGPU does not expose maxAnisotropy (yet?)
+    // Let's use a separate WebGL2 context to obtain the max anisotropy supported by the GPU
+    const gl = document.createElement('canvas').getContext('webgl2')
+    const ext =
+      gl.getExtension('EXT_texture_filter_anisotropic') ||
+      gl.getExtension('MOZ_EXT_texture_filter_anisotropic') ||
+      gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic')
+    const maxAnisotropy = ext
+      ? gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT)
+      : 1
+    console.log(maxAnisotropy)
     this.defaultSampler = new Sampler(
       this.device,
       'defaultSampler',
@@ -51,8 +62,11 @@ export default class WebGPURenderer {
       'sampler',
       {
         minFilter: 'linear',
+        mipmapFilter: 'linear',
+        magFilter: 'linear',
         addressModeU: 'repeat',
         addressModeV: 'repeat',
+        maxAnisotropy,
       },
     )
     this.noFilterSampler = new Sampler(

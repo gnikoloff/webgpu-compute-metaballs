@@ -1,3 +1,5 @@
+import { convertNumberArrToWGLSLVec } from '../helpers'
+
 export const SPACESHIP_VERTEX_SHADER = ({
   useNormalMap,
 }: {
@@ -38,9 +40,7 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
   useNormalTexture: boolean
   useMetallicRoughnessTexture: boolean
 }) => {
-  const baseColor = baseColorFactor
-    .map((a) => (Number.isInteger(a) ? `${a}.0` : a))
-    .join(', ')
+  const baseColor = convertNumberArrToWGLSLVec(baseColorFactor)
   let source = `
     var surface: Surface;
     surface.baseColor = vec4<f32>(${baseColor});
@@ -97,10 +97,18 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
     pointLight.intensity = 40.0;
 
 
+    var pointLight2: PointLight;
+    pointLight2.pointToLight = vec3(cos(viewuniforms.time) * 1.0, 4.0, sin(viewuniforms.time) * 4.0) - input.worldPosition;
+    pointLight2.color = vec3(1.0, 0.0, 0.0);
+    pointLight2.range = 10.0;
+    pointLight2.intensity = 40.0;
+
+
+
     // output luminance to add to
     var Lo = vec3(0.0);
     Lo = Lo + lightRadiance(pointLight, surface);
-    // Lo = Lo + lightRadiance(pointLight2, surface);
+    Lo = Lo + lightRadiance(pointLight2, surface);
 
     // tonemapping
     // Lo = reinhard(Lo);

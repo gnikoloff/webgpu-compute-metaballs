@@ -1,6 +1,8 @@
 import { load } from '@loaders.gl/core'
 import { GLTFLoader } from '@loaders.gl/gltf/dist/esm/gltf-loader'
 
+import { webGPUTextureFromImageBitmapOrCanvas } from './lib/webgpu-texture-from-imagebitmap-or-canvas'
+
 import { SAMPLE_COUNT } from './constants'
 
 import {
@@ -78,6 +80,7 @@ export default class Spaceship extends SceneObject {
 
       let currentNode: SceneObject
       if (gltfNode.mesh) {
+        console.log(gltfNode.mesh)
         for (const primitive of gltfNode.mesh.primitives) {
           const geometry = new Geometry()
           let bindIdx = 0
@@ -133,6 +136,13 @@ export default class Spaceship extends SceneObject {
               )
             }
             if (primitive.material.pbrMetallicRoughness.baseColorTexture) {
+              const mipmappedTexture = webGPUTextureFromImageBitmapOrCanvas(
+                this.renderer.device,
+                primitive.material.pbrMetallicRoughness.baseColorTexture.texture
+                  .source.image,
+                true,
+              )
+              console.log(mipmappedTexture)
               textures.push(
                 new Texture(
                   this.renderer.device,
@@ -140,10 +150,7 @@ export default class Spaceship extends SceneObject {
                   'float',
                   '2d',
                   'texture_2d<f32>',
-                ).fromImageBitmap(
-                  primitive.material.pbrMetallicRoughness.baseColorTexture
-                    .texture.source.image,
-                ),
+                ).copyFromTexture(mipmappedTexture),
               )
               if (
                 primitive.material.pbrMetallicRoughness.metallicRoughnessTexture
@@ -224,8 +231,21 @@ export default class Spaceship extends SceneObject {
             multisample: {
               count: SAMPLE_COUNT,
             },
+            targets: [
+              {
+                format: 'bgra8unorm',
+                blend: {
+                  color: {
+                    srcFactor: 'src-alpha',
+                    dstFactor: 'one-minus-src-alpha',
+                  },
+                  alpha: {
+                    // dstFactor: 'src-alpha',
+                  },
+                },
+              },
+            ],
           })
-          console.log(primitive)
           if (primitive.material.alphaMode === 'MASK') {
             currentNode.setParent(transparentRootNode)
           } else {
