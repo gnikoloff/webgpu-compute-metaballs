@@ -59,7 +59,7 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
 
   if (useMetallicRoughnessTexture) {
     source += `
-      surface.metallic = textureSample(roughnessTexture, defaultSampler, input.uv).r;
+      surface.metallic = textureSample(roughnessTexture, defaultSampler, input.uv).b;
       surface.roughness = textureSample(roughnessTexture, defaultSampler, input.uv).g;
     `
   } else {
@@ -94,17 +94,8 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
     pointLight.pointToLight = pointLightPos - input.worldPosition;
     pointLight.color = vec3(1.0);
     pointLight.range = 10.0;
-    pointLight.intensity = 20.0;
+    pointLight.intensity = 40.0;
 
-    var pointLight2: PointLight;
-    pointLight2.pointToLight = pointLightPos - input.worldPosition;
-    pointLight2.color = vec3(1.0, 0.0, 0.0);
-    pointLight2.range = 10.0;
-    pointLight2.intensity = 40.0;
-
-    // calculate reflectance at normal incidence, if diaelectric (like plastic) use
-    // baseReflectivity of 0.04; if its metal, use the albedo color as baseReflectivity
-    
 
     // output luminance to add to
     var Lo = vec3(0.0);
