@@ -340,7 +340,7 @@ export default class MetaballRenderer extends SceneObject {
     time: DOMHighResTimeStamp,
     timeDelta: number,
   ): this {
-    this.setRotation({ y: time }).setPosition({ y: 0 }).updateWorldMatrix()
+    this.setRotation({ y: time }).updateWorldMatrix()
     const numblobs = MAX_METABALLS
     const subtract = 12
     const strength = (5 / ((Math.sqrt(numblobs) - 1) / 4 + 1)) * 4

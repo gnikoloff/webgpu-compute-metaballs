@@ -15,11 +15,24 @@ import {
 
 import WebGPURenderer from './webgpu-renderer'
 
-import gltfModelURL from './assets/spacestation/SS.glb'
 import {
   SPACESHIP_FRAGMENT_SHADER,
   SPACESHIP_VERTEX_SHADER,
 } from './shaders/spaceship'
+
+import {
+  DISTRIBUTION_GGX_PBR_SHADER_FN,
+  FRESNEL_SCHLICK_PBR_SHADER_FN,
+  GEOMETRY_SMITH_PBR_SHADER_FN,
+  GET_NORMAL_FROM_MAP_PBR_SHADER_FN,
+  LIGHT_RADIANCE_PBR_SHADER_FN,
+  LINEAR_TO_SRGB_SHADER_FN,
+  POINT_LIGHT_SHADER_STRUCT,
+  REINHARD_TONEMAPPING_PBR_SHADER_FN,
+  SURFACE_SHADER_STRUCT,
+} from './shaders/pbr'
+
+import gltfModelURL from './assets/sponza/Sponza.gltf'
 
 const attribNameToShaderNames = new Map([
   ['NORMAL', 'normal'],
@@ -31,6 +44,8 @@ export default class Spaceship extends SceneObject {
   renderer: WebGPURenderer
   renderPipeline!: GPURenderPipeline
   modelUBO: UniformBuffer
+
+  transparentRoot = new SceneObject()
 
   constructor(renderer: WebGPURenderer) {
     super()
@@ -53,7 +68,11 @@ export default class Spaceship extends SceneObject {
   async init() {
     const gltf = await load(gltfModelURL, GLTFLoader)
 
-    const initNode = (gltfNode, sceneNode: SceneObject) => {
+    const initNode = (
+      gltfNode,
+      sceneNode: SceneObject,
+      transparentRootNode: SceneObject,
+    ) => {
       const children = gltfNode.nodes || gltfNode.children
 
       let currentNode: SceneObject
@@ -62,6 +81,7 @@ export default class Spaceship extends SceneObject {
           const geometry = new Geometry()
           let bindIdx = 0
 
+          // console.log(primitive.attribName)
           for (const [key, attribute] of Object.entries(primitive.attributes)) {
             const attribName = attribNameToShaderNames.get(key)
             let vertexFormat: GPUVertexFormat = 'float32x2'
@@ -90,30 +110,56 @@ export default class Spaceship extends SceneObject {
           if (primitive.indices) {
             const indexBuffer = new IndexBuffer(this.renderer.device, {
               typedArray: primitive.indices.value,
+              byteLength: Math.ceil(primitive.indices.value.byteLength / 8) * 8,
             })
             geometry.addIndexBuffer(indexBuffer)
           }
 
           const textures: Texture[] = []
           if (primitive.material) {
-            if (!primitive.material.normalTexture) {
-            }
-
-            for (const [key, materialProp] of Object.entries(
-              primitive.material,
-            )) {
-              if (!materialProp.texture) {
-                continue
-              }
+            // console.log(primitive.material)
+            if (primitive.material.normalTexture) {
               textures.push(
                 new Texture(
                   this.renderer.device,
-                  key,
+                  'normalTexture',
                   'float',
                   '2d',
                   'texture_2d<f32>',
-                ).fromImageBitmap(materialProp.texture.source.image),
+                ).fromImageBitmap(
+                  primitive.material.normalTexture.texture.source.image,
+                ),
               )
+            }
+            if (primitive.material.pbrMetallicRoughness) {
+              textures.push(
+                new Texture(
+                  this.renderer.device,
+                  'albedoTexture',
+                  'float',
+                  '2d',
+                  'texture_2d<f32>',
+                ).fromImageBitmap(
+                  primitive.material.pbrMetallicRoughness.baseColorTexture
+                    .texture.source.image,
+                ),
+              )
+              if (
+                primitive.material.pbrMetallicRoughness.metallicRoughnessTexture
+              ) {
+                textures.push(
+                  new Texture(
+                    this.renderer.device,
+                    'roughnessTexture',
+                    'float',
+                    '2d',
+                    'texture_2d<f32>',
+                  ).fromImageBitmap(
+                    primitive.material.pbrMetallicRoughness
+                      .metallicRoughnessTexture.texture.source.image,
+                  ),
+                )
+              }
             }
           }
 
@@ -124,26 +170,60 @@ export default class Spaceship extends SceneObject {
               this.renderer.viewUBO,
               this.modelUBO,
             ],
-            samplers:
-              !!primitive.material?.normalTexture ||
-              !!primitive.material?.emissiveTexture
-                ? [this.renderer.defaultSampler]
-                : [],
+            samplers: [
+              this.renderer.defaultSampler,
+              this.renderer.noFilterSampler,
+            ],
             textures,
             vertexShaderSource: {
+              outputs: {
+                worldPosition: {
+                  format: 'float32x3',
+                },
+              },
               main: SPACESHIP_VERTEX_SHADER,
             },
             fragmentShaderSource: {
+              inputs: {
+                worldPosition: {
+                  format: 'float32x3',
+                },
+              },
+              head: `
+                let PI = ${Math.PI};
+                ${POINT_LIGHT_SHADER_STRUCT}
+                ${SURFACE_SHADER_STRUCT}
+                ${
+                  primitive.material.normalTexture
+                    ? GET_NORMAL_FROM_MAP_PBR_SHADER_FN
+                    : ''
+                }
+                ${DISTRIBUTION_GGX_PBR_SHADER_FN}
+                ${GEOMETRY_SMITH_PBR_SHADER_FN}
+                ${FRESNEL_SCHLICK_PBR_SHADER_FN}
+                ${REINHARD_TONEMAPPING_PBR_SHADER_FN}
+                ${LIGHT_RADIANCE_PBR_SHADER_FN}
+                ${LINEAR_TO_SRGB_SHADER_FN}
+              `,
               main: SPACESHIP_FRAGMENT_SHADER(
-                !!primitive.material?.normalTexture,
-                !!primitive.material?.emissiveTexture,
+                primitive.material.pbrMetallicRoughness.baseColorFactor,
+                !!primitive.material.normalTexture,
+                !!primitive.material.pbrMetallicRoughness
+                  .metallicRoughnessTexture,
               ),
             },
             multisample: {
               count: SAMPLE_COUNT,
             },
           })
-          currentNode.setParent(sceneNode)
+          if (
+            primitive.material.pbrMetallicRoughness.baseColorTexture.texture
+              .source.mimeType === 'image/png'
+          ) {
+            currentNode.setParent(transparentRootNode)
+          } else {
+            currentNode.setParent(sceneNode)
+          }
         }
       } else {
         currentNode = new SceneObject()
@@ -161,15 +241,16 @@ export default class Spaceship extends SceneObject {
 
       if (children && children.length) {
         for (const childNode of children) {
-          initNode(childNode, currentNode)
+          initNode(childNode, currentNode, transparentRootNode)
         }
       }
     }
 
-    initNode(gltf.scenes[0], this)
-    const sc = 2
+    initNode(gltf.scenes[0], this, this.transparentRoot)
+    const sc = 0.015
     this.setScale({ x: sc, y: sc, z: sc })
-      .setPosition({ z: 3 })
+      .setPosition({ z: 0, x: 0.5 })
+      .setRotation({ y: Math.PI / 2 })
       .updateWorldMatrix()
   }
 
@@ -182,6 +263,12 @@ export default class Spaceship extends SceneObject {
     this.modelUBO.updateUniform('matrix', this.modelMatrix as Float32Array)
     // console.log(this.modelMatrix)
     this.traverse((node) => {
+      if (!(node instanceof Mesh)) {
+        return
+      }
+      node.render(renderPass)
+    })
+    this.transparentRoot.traverse((node) => {
       if (!(node instanceof Mesh)) {
         return
       }

@@ -19,14 +19,14 @@ import WebGPURenderer from './webgpu-renderer'
     (45 * Math.PI) / 180,
     innerWidth / innerHeight,
     0.1,
-    20,
+    40,
   )
-    .setPosition({ x: 0, y: 0, z: -13 })
-    .lookAt([0, 0, 0])
+    .setPosition({ x: 0, y: 5, z: -13 })
+    .lookAt([0, 1, 0])
     .updateViewMatrix()
     .updateProjectionMatrix()
 
-  new CameraController(perspCamera, document.body, false, 0.1).lookAt([0, 0, 0])
+  new CameraController(perspCamera, document.body, true, 0.1).lookAt([0, 1, 0])
 
   const renderer = new WebGPURenderer(adapter)
   renderer.devicePixelRatio = devicePixelRatio
@@ -57,6 +57,7 @@ import WebGPURenderer from './webgpu-renderer'
   }
 
   const metaballs = new MetaballRenderer(renderer, volume)
+  metaballs.setPosition({ y: 2 })
   const gridHelper = new HelperGrid(renderer)
   const spaceship = new Spaceship(renderer)
 
@@ -73,7 +74,9 @@ import WebGPURenderer from './webgpu-renderer'
       'matrix',
       perspCamera.viewMatrix as Float32Array,
     )
-    renderer.viewUBO.updateUniform('time', new Float32Array([time]))
+    renderer.viewUBO
+      .updateUniform('time', new Float32Array([time]))
+      .updateUniform('position', new Float32Array(perspCamera.position))
 
     renderer.onRender()
 
@@ -89,6 +92,7 @@ import WebGPURenderer from './webgpu-renderer'
       depthStencilAttachment: renderer.depthAndStencilAttachment,
     })
 
+    // renderPass.setBlendConstant()
     gridHelper.render(renderPass)
     metaballs.render(renderPass)
     spaceship.update(time, 0).render(renderPass)

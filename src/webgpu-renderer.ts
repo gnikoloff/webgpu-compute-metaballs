@@ -18,6 +18,7 @@ export default class WebGPURenderer {
   projectionUBO!: UniformBuffer
   viewUBO!: UniformBuffer
   defaultSampler: Sampler
+  noFilterSampler: Sampler
 
   get presentationFormat() {
     return this.context.getPreferredFormat(this.adapter)
@@ -48,6 +49,16 @@ export default class WebGPURenderer {
       'mySampler',
       'filtering',
       'sampler',
+      {
+        minFilter: 'linear',
+        addressModeU: 'repeat',
+        addressModeV: 'repeat',
+      },
+    )
+    this.noFilterSampler = new Sampler(
+      this.device,
+      'noFilterSampler',
+      'non-filtering',
     )
 
     this.projectionUBO = new UniformBuffer(this.device, {
