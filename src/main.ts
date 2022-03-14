@@ -2,9 +2,30 @@ import HelperGrid from './helper-grid'
 import { VolumeSettings } from './interfaces'
 import { PerspectiveCamera, CameraController } from './lib/hwoa-rang-gpu'
 import MetaballRenderer from './metaball-renderer'
-import Spaceship from './spaceship'
+import GLTFModel from './gltf-model'
+import FireEmitter from './fire-emitter'
 
 import WebGPURenderer from './webgpu-renderer'
+
+const FIRE_EMITTERS = [
+  {
+    pos: { x: 2.6, y: 1.9, z: -7.5 },
+    scale: { x: 0.1, y: 0.1, z: 0.1 },
+  },
+  {
+    pos: { x: -2.8, y: 1.9, z: -7.5 },
+    scale: { x: 0.1, y: 0.1, z: 0.1 },
+  },
+  {
+    pos: { x: 2.6, y: 1.9, z: 9.4 },
+    scale: { x: 0.1, y: 0.1, z: 0.1 },
+  },
+  {
+    pos: { x: -2.8, y: 1.9, z: 9.4 },
+    scale: { x: 0.1, y: 0.1, z: 0.1 },
+  },
+]
+
 ;(async () => {
   let oldTime = 0
 
@@ -59,7 +80,14 @@ import WebGPURenderer from './webgpu-renderer'
   const metaballs = new MetaballRenderer(renderer, volume)
   metaballs.setPosition({ y: 2 })
   const gridHelper = new HelperGrid(renderer)
-  const spaceship = new Spaceship(renderer)
+  const gltfModel = new GLTFModel(renderer)
+  const fireEmitters: FireEmitter[] = []
+  for (let i = 0; i < FIRE_EMITTERS.length; i++) {
+    const fireEmitter = new FireEmitter(renderer)
+    const { pos, scale } = FIRE_EMITTERS[i]
+    fireEmitter.setPosition(pos).setScale(scale).updateWorldMatrix()
+    fireEmitters.push(fireEmitter)
+  }
 
   requestAnimationFrame(renderFrame)
 
@@ -92,10 +120,10 @@ import WebGPURenderer from './webgpu-renderer'
       depthStencilAttachment: renderer.depthAndStencilAttachment,
     })
 
-    // renderPass.setBlendConstant()
     gridHelper.render(renderPass)
     metaballs.render(renderPass)
-    spaceship.update(time, 0).render(renderPass)
+    gltfModel.update(time, 0).render(renderPass)
+    fireEmitters.forEach((fireEmitter) => fireEmitter.render(renderPass))
 
     renderPass.end()
 

@@ -129,7 +129,7 @@ function webGPUGenerateMipmap(gpuDevice, texture, textureDescriptor) {
     passEncoder.setPipeline(pipeline)
     passEncoder.setBindGroup(0, bindGroup)
     passEncoder.draw(4)
-    passEncoder.endPass()
+    passEncoder.end()
 
     // The source texture view for the next iteration of the loop is the
     // destination view for this one.

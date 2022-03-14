@@ -23,10 +23,10 @@ import {
 } from './shaders/spaceship'
 
 import {
+  DIRECTIONAL_LIGHT_SHADER_STRUCT,
   DISTRIBUTION_GGX_PBR_SHADER_FN,
   FRESNEL_SCHLICK_PBR_SHADER_FN,
   GEOMETRY_SMITH_PBR_SHADER_FN,
-  GET_NORMAL_FROM_MAP_PBR_SHADER_FN,
   LIGHT_RADIANCE_PBR_SHADER_FN,
   LINEAR_TO_SRGB_SHADER_FN,
   POINT_LIGHT_SHADER_STRUCT,
@@ -43,7 +43,7 @@ const attribNameToShaderNames = new Map([
   ['TEXCOORD_0', 'uv'],
 ])
 
-export default class Spaceship extends SceneObject {
+export default class GLTFModel extends SceneObject {
   renderer: WebGPURenderer
   renderPipeline!: GPURenderPipeline
   modelUBO: UniformBuffer
@@ -62,7 +62,7 @@ export default class Spaceship extends SceneObject {
           value: this.worldMatrix as Float32Array,
         },
       },
-      debugLabel: 'spaceship model ubo',
+      debugLabel: 'gltf model model ubo',
     })
 
     this.init()
@@ -80,7 +80,7 @@ export default class Spaceship extends SceneObject {
 
       let currentNode: SceneObject
       if (gltfNode.mesh) {
-        console.log(gltfNode.mesh)
+        // console.log(gltfNode.mesh)
         for (const primitive of gltfNode.mesh.primitives) {
           const geometry = new Geometry()
           let bindIdx = 0
@@ -142,7 +142,7 @@ export default class Spaceship extends SceneObject {
                   .source.image,
                 true,
               )
-              console.log(mipmappedTexture)
+              // console.log(mipmappedTexture)
               textures.push(
                 new Texture(
                   this.renderer.device,
@@ -150,7 +150,7 @@ export default class Spaceship extends SceneObject {
                   'float',
                   '2d',
                   'texture_2d<f32>',
-                ).copyFromTexture(mipmappedTexture),
+                ).fromTexture(mipmappedTexture),
               )
               if (
                 primitive.material.pbrMetallicRoughness.metallicRoughnessTexture
@@ -208,6 +208,7 @@ export default class Spaceship extends SceneObject {
               head: `
                 let PI = ${Math.PI};
                 ${POINT_LIGHT_SHADER_STRUCT}
+                ${DIRECTIONAL_LIGHT_SHADER_STRUCT}
                 ${SURFACE_SHADER_STRUCT}
                 ${DISTRIBUTION_GGX_PBR_SHADER_FN}
                 ${GEOMETRY_SMITH_PBR_SHADER_FN}

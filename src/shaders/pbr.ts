@@ -71,6 +71,13 @@ export const POINT_LIGHT_SHADER_STRUCT = `
   };
 `
 
+export const DIRECTIONAL_LIGHT_SHADER_STRUCT = `
+  struct DirectionalLight {
+    direction: vec3<f32>;
+    color: vec3<f32>;
+  }
+`
+
 export const SURFACE_SHADER_STRUCT = `
   struct Surface {
     baseColor: vec4<f32>;
@@ -92,7 +99,7 @@ export const LIGHT_RADIANCE_PBR_SHADER_FN = `
     return clamp(1.0 - pow(distance / range, 4.0), 0.0, 1.0) / pow(distance, 2.0);
   }
 
-  fn lightRadiance(light : PointLight, surface : Surface) -> vec3<f32> {
+  fn PointLightRadiance(light : PointLight, surface : Surface) -> vec3<f32> {
     let L = normalize(light.pointToLight);
     let H = normalize(surface.V + L);
     let distance = length(light.pointToLight);
@@ -113,6 +120,28 @@ export const LIGHT_RADIANCE_PBR_SHADER_FN = `
     // add to outgoing radiance Lo
     let attenuation = rangeAttenuation(light.range, distance);
     let radiance = light.color * light.intensity * attenuation;
+    return (kD * surface.albedo.rgb / vec3<f32>(PI, PI, PI) + specular) * radiance * NdotL;
+  }
+
+  fn DirectionalLightRadiance(light : DirectionalLight, surface : Surface) -> vec3<f32> {
+    let L = normalize(light.direction);
+    let H = normalize(surface.V + L);
+
+    // cook-torrance brdf
+    let NDF = DistributionGGX(surface.N, H, surface.roughness);
+    let G = GeometrySmith(surface.N, surface.V, L, surface.roughness);
+    let F = FresnelSchlick(max(dot(H, surface.V), 0.0), surface.F0);
+
+    let kD = (vec3<f32>(1.0, 1.0, 1.0) - F) * (1.0 - surface.metallic);
+
+    let NdotL = max(dot(surface.N, L), 0.0);
+
+    let numerator = NDF * G * F;
+    let denominator = max(4.0 * max(dot(surface.N, surface.V), 0.0) * NdotL, 0.001);
+    let specular = numerator / vec3<f32>(denominator, denominator, denominator);
+
+    // add to outgoing radiance Lo
+    let radiance = light.color;
     return (kD * surface.albedo.rgb / vec3<f32>(PI, PI, PI) + specular) * radiance * NdotL;
   }
 `
