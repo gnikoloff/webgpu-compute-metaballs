@@ -1,3 +1,4 @@
+import { mat4 } from 'gl-matrix'
 import { SAMPLE_COUNT } from './constants'
 import {
   VertexBuffer,
@@ -120,6 +121,7 @@ export default class FireEmitter extends SceneObject {
             alpha: {
               srcFactor: 'src-alpha',
               dstFactor: 'one-minus-src-alpha',
+              operation: 'add',
             },
           },
         },
@@ -132,8 +134,9 @@ export default class FireEmitter extends SceneObject {
 
     console.log(this.modelMatrix)
   }
-  render(renderPass: GPURenderPassEncoder) {
+  updateWorldMatrix(parentWorldMatrix?: mat4): this {
+    super.updateWorldMatrix(parentWorldMatrix)
     this.modelUBO.updateUniform('matrix', this.modelMatrix as Float32Array)
-    this.mesh.render(renderPass)
+    return this
   }
 }

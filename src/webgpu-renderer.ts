@@ -1,5 +1,16 @@
-import { BACKGROUND_COLOR, DEPTH_FORMAT, SAMPLE_COUNT } from './constants'
-import { BindGroup, Sampler, UniformBuffer } from './lib/hwoa-rang-gpu'
+import {
+  BACKGROUND_COLOR,
+  DEPTH_FORMAT,
+  SAMPLE_COUNT,
+  SHADOW_MAP_SIZE,
+} from './constants'
+import {
+  BindGroup,
+  Sampler,
+  Texture,
+  Uniform,
+  UniformBuffer,
+} from './lib/hwoa-rang-gpu'
 
 export default class WebGPURenderer {
   adapter: GPUAdapter
@@ -14,11 +25,16 @@ export default class WebGPURenderer {
   device!: GPUDevice
   colorAttachment!: GPURenderPassColorAttachment
   depthAndStencilAttachment!: GPURenderPassDepthStencilAttachment
+  shadowDepthTexture: Texture
 
   projectionUBO!: UniformBuffer
   viewUBO!: UniformBuffer
+  shadowProjectionUBO!: UniformBuffer
+  shadowViewUBO!: UniformBuffer
+
   defaultSampler: Sampler
-  noFilterSampler: Sampler
+  depthSampler: Sampler
+  depthDebugSampler: Sampler
 
   get presentationFormat() {
     return this.context.getPreferredFormat(this.adapter)
@@ -54,7 +70,6 @@ export default class WebGPURenderer {
     const maxAnisotropy = ext
       ? gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT)
       : 1
-    console.log(maxAnisotropy)
     this.defaultSampler = new Sampler(
       this.device,
       'defaultSampler',
@@ -69,42 +84,48 @@ export default class WebGPURenderer {
         maxAnisotropy,
       },
     )
-    this.noFilterSampler = new Sampler(
-      this.device,
-      'noFilterSampler',
-      'non-filtering',
-    )
+
+    const projectionUBOUniformDefinition: { [key: string]: Uniform } = {
+      matrix: {
+        type: 'mat4x4<f32>',
+      },
+      outputSize: {
+        type: 'vec2<f32>',
+      },
+      zNear: {
+        type: 'f32',
+      },
+      zFar: {
+        type: 'f32',
+      },
+    }
+    const viewUBOUniformDefinition: { [key: string]: Uniform } = {
+      matrix: {
+        type: 'mat4x4<f32>',
+      },
+      position: {
+        type: 'vec3<f32>',
+      },
+      time: {
+        type: 'f32',
+      },
+    }
 
     this.projectionUBO = new UniformBuffer(this.device, {
       name: 'ProjectionUniforms',
-      uniforms: {
-        matrix: {
-          type: 'mat4x4<f32>',
-        },
-        outputSize: {
-          type: 'vec2<f32>',
-        },
-        zNear: {
-          type: 'f32',
-        },
-        zFar: {
-          type: 'f32',
-        },
-      },
+      uniforms: projectionUBOUniformDefinition,
+    })
+    this.shadowProjectionUBO = new UniformBuffer(this.device, {
+      name: 'ShadowProjectionUniforms',
+      uniforms: projectionUBOUniformDefinition,
     })
     this.viewUBO = new UniformBuffer(this.device, {
       name: 'ViewUniforms',
-      uniforms: {
-        matrix: {
-          type: 'mat4x4<f32>',
-        },
-        position: {
-          type: 'vec3<f32>',
-        },
-        time: {
-          type: 'f32',
-        },
-      },
+      uniforms: viewUBOUniformDefinition,
+    })
+    this.shadowViewUBO = new UniformBuffer(this.device, {
+      name: 'ShadowViewUniforms',
+      uniforms: viewUBOUniformDefinition,
     })
 
     const presentationFormat = this.context.getPreferredFormat(this.adapter)
@@ -113,7 +134,12 @@ export default class WebGPURenderer {
       format: presentationFormat,
     })
 
-    const msaaColorTexture = this.device.createTexture({
+    const msaaColorTexture = new Texture(
+      this.device,
+      'msaaTexture',
+      'float',
+      '2d',
+    ).fromDefinition({
       size: { width: this.outputSize[0], height: this.outputSize[1] },
       sampleCount: SAMPLE_COUNT,
       format: presentationFormat,
@@ -121,7 +147,7 @@ export default class WebGPURenderer {
     })
 
     this.colorAttachment = {
-      view: msaaColorTexture.createView(),
+      view: msaaColorTexture.get().createView(),
       resolveTarget: undefined,
       clearValue: {
         r: BACKGROUND_COLOR[0],
@@ -133,33 +159,64 @@ export default class WebGPURenderer {
       storeOp: 'discard',
     }
 
-    const depthTexture = this.device.createTexture({
+    const depthTexture = new Texture(
+      this.device,
+      'depthTexture',
+      'depth',
+      '2d',
+      'texture_depth_2d',
+    ).fromDefinition({
       size: { width: this.outputSize[0], height: this.outputSize[1] },
       sampleCount: SAMPLE_COUNT,
       format: DEPTH_FORMAT,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     })
+
+    // const depthTexture = this.device.createTexture({
+    //   size: { width: this.outputSize[0], height: this.outputSize[1] },
+    //   sampleCount: SAMPLE_COUNT,
+    //   format: DEPTH_FORMAT,
+    //   usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    // })
+
     this.depthAndStencilAttachment = {
-      view: depthTexture.createView(),
+      view: depthTexture.get().createView(),
       depthLoadValue: 1,
       depthStoreOp: 'discard',
-      // stencilLoadValue: 0,
-      // stencilStoreOp: 'discard',
-
-      // view: depthTexture.createView(),
-      // // depthLoadValue: 1,
-      // depthLoadOp: 'clear',
-      // depthStoreOp: 'discard',
-      // // depthStoreOp: 'discard',
-      // // depthReadOnly: false,
-      // // stencilLoadValue: 0,
-      // // stencilStoreOp: 'discard',
     }
+
+    this.shadowDepthTexture = new Texture(
+      this.device,
+      'shadowDepthTexture',
+      'depth',
+      '2d',
+      'texture_depth_2d',
+    ).fromDefinition({
+      size: [SHADOW_MAP_SIZE, SHADOW_MAP_SIZE, 1],
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+      format: 'depth32float',
+    })
+    this.depthDebugSampler = new Sampler(this.device, 'depthDebugSampler')
+    this.depthSampler = new Sampler(
+      this.device,
+      'depthSampler',
+      'comparison',
+      'sampler_comparison',
+      {
+        compare: 'less',
+      },
+    )
 
     this.bindGroups.frame = new BindGroup(this.device, 0)
     this.bindGroups.frame.addUBO(this.projectionUBO)
     this.bindGroups.frame.addUBO(this.viewUBO)
     this.bindGroups.frame.init()
+
+    this.bindGroups.shadow = new BindGroup(this.device, 0)
+    this.bindGroups.shadow.addUBO(this.shadowProjectionUBO)
+    this.bindGroups.shadow.addUBO(this.shadowViewUBO)
+    this.bindGroups.shadow.init()
   }
 
   onRender() {

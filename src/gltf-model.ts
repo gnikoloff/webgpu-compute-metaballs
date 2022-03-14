@@ -18,9 +18,11 @@ import {
 import WebGPURenderer from './webgpu-renderer'
 
 import {
-  SPACESHIP_FRAGMENT_SHADER,
-  SPACESHIP_VERTEX_SHADER,
-} from './shaders/spaceship'
+  MAKE_GLTF_MODEL_FRAGMENT_SHADER,
+  MAKE_GLTF_MODEL_VERTEX_SHADER,
+  SHADOW_FRAGMENT_SHADER,
+  SHADOW_VERTEX_SHADER,
+} from './shaders/gltf-model'
 
 import {
   DIRECTIONAL_LIGHT_SHADER_STRUCT,
@@ -35,6 +37,7 @@ import {
 } from './shaders/pbr'
 
 import gltfModelURL from './assets/sponza/sponza.glb'
+import { mat4 } from 'gl-matrix'
 
 const attribNameToShaderNames = new Map([
   ['NORMAL', 'normal'],
@@ -48,7 +51,9 @@ export default class GLTFModel extends SceneObject {
   renderPipeline!: GPURenderPipeline
   modelUBO: UniformBuffer
 
+  opaqueRoot = new SceneObject()
   transparentRoot = new SceneObject()
+  shadowRoot = new SceneObject()
 
   constructor(renderer: WebGPURenderer) {
     super()
@@ -75,10 +80,13 @@ export default class GLTFModel extends SceneObject {
       gltfNode,
       sceneNode: SceneObject,
       transparentRootNode: SceneObject,
+      shadowParentNode: SceneObject,
     ) => {
       const children = gltfNode.nodes || gltfNode.children
 
       let currentNode: SceneObject
+      let shadowNode: SceneObject
+
       if (gltfNode.mesh) {
         // console.log(gltfNode.mesh)
         for (const primitive of gltfNode.mesh.primitives) {
@@ -171,18 +179,44 @@ export default class GLTFModel extends SceneObject {
             }
           }
 
+          shadowNode = new Mesh(this.renderer.device, {
+            // debugVertexShader: true,
+            // debugFragmentShader: true,
+            geometry,
+            ubos: [
+              this.renderer.shadowProjectionUBO,
+              this.renderer.shadowViewUBO,
+              this.modelUBO,
+            ],
+            vertexShaderSource: {
+              main: SHADOW_VERTEX_SHADER,
+            },
+            fragmentShaderSource: {
+              main: SHADOW_FRAGMENT_SHADER,
+            },
+            targets: [],
+            depthStencil: {
+              depthWriteEnabled: true,
+              depthCompare: 'less',
+              format: 'depth32float',
+            },
+          })
+          shadowNode.setParent(shadowParentNode)
+
           currentNode = new Mesh(this.renderer.device, {
             geometry,
             ubos: [
               this.renderer.projectionUBO,
               this.renderer.viewUBO,
+              this.renderer.shadowProjectionUBO,
+              this.renderer.shadowViewUBO,
               this.modelUBO,
             ],
             samplers: [
               this.renderer.defaultSampler,
-              this.renderer.noFilterSampler,
+              this.renderer.depthSampler,
             ],
-            textures,
+            textures: [...textures, this.renderer.shadowDepthTexture],
             vertexShaderSource: {
               outputs: {
                 worldPosition: {
@@ -191,8 +225,11 @@ export default class GLTFModel extends SceneObject {
                 bitangent: {
                   format: 'float32x3',
                 },
+                shadowPos: {
+                  format: 'float32x4',
+                },
               },
-              main: SPACESHIP_VERTEX_SHADER({
+              main: MAKE_GLTF_MODEL_VERTEX_SHADER({
                 useNormalMap: !!primitive.attributes.TANGENT,
               }),
             },
@@ -203,6 +240,9 @@ export default class GLTFModel extends SceneObject {
                 },
                 bitangent: {
                   format: 'float32x3',
+                },
+                shadowPos: {
+                  format: 'float32x4',
                 },
               },
               head: `
@@ -217,7 +257,7 @@ export default class GLTFModel extends SceneObject {
                 ${LIGHT_RADIANCE_PBR_SHADER_FN}
                 ${LINEAR_TO_SRGB_SHADER_FN}
               `,
-              main: SPACESHIP_FRAGMENT_SHADER({
+              main: MAKE_GLTF_MODEL_FRAGMENT_SHADER({
                 baseColorFactor:
                   primitive.material.pbrMetallicRoughness.baseColorFactor,
                 useNormalMap: !!primitive.attributes.TANGENT,
@@ -256,51 +296,54 @@ export default class GLTFModel extends SceneObject {
       } else {
         currentNode = new SceneObject()
         currentNode.setParent(sceneNode)
+
+        shadowNode = new SceneObject()
+        shadowNode.setParent(shadowParentNode)
       }
 
       if (gltfNode.translation) {
         const [x, y, z] = gltfNode.translation
         currentNode.setPosition({ x, y, z })
+        shadowNode.setPosition({ x, y, z })
       }
       if (gltfNode.scale) {
         const [x, y, z] = gltfNode.scale
         currentNode.setScale({ x, y, z })
+        shadowNode.setScale({ x, y, z })
       }
 
       if (children && children.length) {
         for (const childNode of children) {
-          initNode(childNode, currentNode, transparentRootNode)
+          initNode(
+            childNode,
+            currentNode,
+            transparentRootNode,
+            shadowParentNode,
+          )
         }
       }
     }
 
-    initNode(gltf.scenes[0], this, this.transparentRoot)
+    initNode(
+      gltf.scenes[0],
+      this.opaqueRoot,
+      this.transparentRoot,
+      this.shadowRoot,
+    )
     const sc = 0.015
     this.setScale({ x: sc, y: sc, z: sc })
       .setPosition({ z: 0, x: 0.5 })
       .setRotation({ y: Math.PI / 2 })
       .updateWorldMatrix()
+
+    this.transparentRoot.copyFromMatrix(this.worldMatrix).updateWorldMatrix()
+    this.opaqueRoot.copyFromMatrix(this.worldMatrix).updateWorldMatrix()
+    this.shadowRoot.copyFromMatrix(this.worldMatrix).updateWorldMatrix()
   }
 
-  update(time: DOMHighResTimeStamp, dt: number): this {
-    // this.setRotation({ y: time }).updateWorldMatrix()
-    return this
-  }
-
-  render(renderPass: GPURenderPassEncoder) {
+  updateWorldMatrix(parentWorldMatrix?: mat4): this {
+    super.updateWorldMatrix(parentWorldMatrix)
     this.modelUBO.updateUniform('matrix', this.modelMatrix as Float32Array)
-    // console.log(this.modelMatrix)
-    this.traverse((node) => {
-      if (!(node instanceof Mesh)) {
-        return
-      }
-      node.render(renderPass)
-    })
-    this.transparentRoot.traverse((node) => {
-      if (!(node instanceof Mesh)) {
-        return
-      }
-      node.render(renderPass)
-    })
+    return this
   }
 }

@@ -1,6 +1,6 @@
 import { convertNumberArrToWGLSLVec } from '../helpers'
 
-export const SPACESHIP_VERTEX_SHADER = ({
+export const MAKE_GLTF_MODEL_VERTEX_SHADER = ({
   useNormalMap,
 }: {
   useNormalMap: boolean
@@ -12,6 +12,12 @@ export const SPACESHIP_VERTEX_SHADER = ({
   output.normal = normalize((model.matrix * vec4<f32>(input.normal, 0.0)).xyz);
   output.worldPosition = worldPos.xyz;
 
+  let posFromLight: vec4<f32> = shadowprojectionuniforms.matrix *
+                                shadowviewuniforms.matrix *
+                                worldPos;
+
+  output.shadowPos = posFromLight;
+
   ${
     useNormalMap
       ? `
@@ -19,17 +25,20 @@ export const SPACESHIP_VERTEX_SHADER = ({
         output.bitangent = cross(output.normal, output.tangent.xyz) * input.tangent.w;
       `
       : ''
-  }
-  
+  } 
 `
 
-//  var normalColor = textureSample(normalTexture, mySampler, vec2<f32>(input.uv.x, 1.0 - input.uv.y));
-//       var emissiveColor = textureSample(emissiveTexture, mySampler, vec2<f32>(input.uv.x, 1.0 - input.uv.y));
-//       output.Color = mix(normalColor, emissiveColor, 0.0) + normal;
+export const SHADOW_VERTEX_SHADER = `
+  let worldPos = model.matrix * vec4(input.position, 1.0);
+  output.Position = shadowprojectionuniforms.matrix * shadowviewuniforms.matrix * worldPos;
+`
 
-export const SPACESHIP_FRAGMENT_SHADER = ({
+export const SHADOW_FRAGMENT_SHADER = `
+  output.Color = vec4<f32>(1.0);
+`
+
+export const MAKE_GLTF_MODEL_FRAGMENT_SHADER = ({
   baseColorFactor,
-  // useNormalMap,
   useAlbedoTexture,
   useNormalTexture,
   useMetallicRoughnessTexture,
@@ -44,7 +53,6 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
   let source = `
     var surface: Surface;
     surface.baseColor = vec4<f32>(${baseColor});
-    
   `
 
   if (useAlbedoTexture) {
@@ -133,6 +141,30 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
     Lo = Lo + PointLightRadiance(pointLight5, surface);
     Lo = Lo + DirectionalLightRadiance(dirLight, surface);
 
+    // shadow mapping
+    // Calculate projected UVs from light point of view
+    var shadowPos = input.shadowPos.xyz / input.shadowPos.w;
+    shadowPos = shadowPos * vec3(0.5, -0.5, 1.0) + vec3(0.5, 0.5, 0.0);
+    
+    // Percentage close filtering
+    var visibility = 0.0;
+    for (var y: i32 = -1 ; y <= 1 ; y = y + 1) {
+      for (var x: i32 = -1 ; x <= 1 ; x = x + 1) {
+        let offset : vec2<f32> = vec2<f32>(
+          f32(x) * 0.0009765625,
+          f32(y) * 0.0009765625
+        );
+
+        visibility = visibility + textureSampleCompare(
+          shadowDepthTexture,
+          depthSampler,
+          shadowPos.xy + offset,
+          shadowPos.z - 0.0055
+        );
+      }
+    }
+    visibility = visibility / 9.0;
+
     // tonemapping
     // Lo = reinhard(Lo);
 
@@ -140,7 +172,7 @@ export const SPACESHIP_FRAGMENT_SHADER = ({
     // Lo = pow(Lo, vec3(1.0/2.2)); 
 
     let ambient = vec3(0.001) * surface.albedo.rgb;
-    let color = linearTosRGB(ambient + Lo);
+    let color = linearTosRGB(ambient + Lo * visibility);
 
     output.Color = vec4(color, surface.albedo.a);
   `
