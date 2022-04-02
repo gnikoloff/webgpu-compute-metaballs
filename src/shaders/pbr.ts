@@ -64,29 +64,29 @@ export const REINHARD_TONEMAPPING_PBR_SHADER_FN = `
 
 export const POINT_LIGHT_SHADER_STRUCT = `
   struct PointLight {
-    pointToLight: vec3<f32>;
-    color: vec3<f32>;
-    range: f32;
-    intensity: f32;
+    pointToLight: vec3<f32>,
+    color: vec3<f32>,
+    range: f32,
+    intensity: f32,
   };
 `
 
 export const DIRECTIONAL_LIGHT_SHADER_STRUCT = `
   struct DirectionalLight {
-    direction: vec3<f32>;
-    color: vec3<f32>;
+    direction: vec3<f32>,
+    color: vec3<f32>,
   }
 `
 
 export const SURFACE_SHADER_STRUCT = `
   struct Surface {
-    baseColor: vec4<f32>;
-    albedo: vec4<f32>;
-    metallic: f32;
-    roughness: f32;
-    N: vec3<f32>;
-    F0: vec3<f32>;
-    V: vec3<f32>;
+    baseColor: vec4<f32>,
+    albedo: vec4<f32>,
+    metallic: f32,
+    roughness: f32,
+    N: vec3<f32>,
+    F0: vec3<f32>,
+    V: vec3<f32>,
   };
 `
 

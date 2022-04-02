@@ -55,11 +55,11 @@ export default class HelperGrid {
           ${ViewUniforms}
 
           struct Inputs {
-            @location(0) position: vec3<f32>;
+            @location(0) position: vec3<f32>,
           }
 
           struct VertexOutput {
-            @builtin(position) position: vec4<f32>;
+            @builtin(position) position: vec4<f32>,
           }
 
           @stage(vertex)
@@ -88,7 +88,7 @@ export default class HelperGrid {
           label: 'grid fragment shader',
           code: `
           struct Output {
-            @location(0) Color: vec4<f32>;
+            @location(0) Color: vec4<f32>,
           }
           @stage(fragment)
           fn main() -> Output {
