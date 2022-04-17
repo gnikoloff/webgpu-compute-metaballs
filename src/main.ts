@@ -16,7 +16,7 @@ import GLTFModel from './gltf-model'
 import FireEmitter from './fire-emitter'
 
 import WebGPURenderer from './webgpu-renderer'
-import { SAMPLE_COUNT, SHADOW_MAP_SIZE } from './constants'
+import ShadowMapDebugger from './debug/shadow-map-debugger'
 
 const FIRE_EMITTERS = [
   {
@@ -58,15 +58,15 @@ const FIRE_EMITTERS = [
     40,
   )
     .setPosition({ x: 0, y: 5, z: -13 })
-    .lookAt([0, 1, 0])
-    .updateViewMatrix()
-    .updateProjectionMatrix()
+    .lookAt({ x: 0, y: 1, z: 0 })
 
   const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -200, 200)
     .setPosition({ x: 2, y: 20, z: 0 })
-    .lookAt([0, 1, 0])
-    .updateViewMatrix()
-    .updateProjectionMatrix()
+    .lookAt({ x: 0, y: 1, z: 0 })
+	
+	const screenOrthoCamera = new OrthographicCamera(-innerWidth / 2, innerWidth / 2, innerHeight / 2, -innerHeight / 2, 0, 2)
+		.setPosition({ x: 0, y: 0, z: 1 })
+		.lookAt({ x: 0, y: 0, z: 0 })
 
   new CameraController(perspCamera, document.body, true, 0.1).lookAt([0, 1, 0])
 
@@ -82,6 +82,7 @@ const FIRE_EMITTERS = [
     .updateUniform('outputSize', new Float32Array([innerWidth, innerHeight]))
     .updateUniform('zNear', new Float32Array([perspCamera.near]))
     .updateUniform('zFar', new Float32Array([perspCamera.far]))
+
   renderer.shadowProjectionUBO
     .updateUniform('matrix', shadowCamera.projectionMatrix as Float32Array)
     .updateUniform('outputSize', new Float32Array([innerWidth, innerHeight]))
@@ -94,6 +95,12 @@ const FIRE_EMITTERS = [
   renderer.shadowViewUBO
     .updateUniform('matrix', shadowCamera.viewMatrix as Float32Array)
     .updateUniform('position', new Float32Array(shadowCamera.position))
+
+	renderer.screenProjectionUBO
+		.updateUniform('matrix', screenOrthoCamera.projectionMatrix as Float32Array)
+	renderer.screenViewUBO
+		.updateUniform('matrix', screenOrthoCamera.viewMatrix as Float32Array)
+	// console.log(screenOrthoCamera.projectionMatrix, screenOrthoCamera.viewMatrix)
 
   const volume: VolumeSettings = {
     xMin: -1.75,
@@ -129,79 +136,12 @@ const FIRE_EMITTERS = [
   }
 
   // debug shadow map
-  const debugPlaneGeometry = new Geometry()
-  {
-    const { vertexStride, interleavedArray, indicesArray } =
-      GeometryUtils.createInterleavedPlane({
-        width: 1,
-        height: 1,
-      })
-    const vertexBuffer = new VertexBuffer(renderer.device, {
-      bindPointIdx: 0,
-      typedArray: interleavedArray,
-      stride: vertexStride * Float32Array.BYTES_PER_ELEMENT,
-    })
-      .addAttribute(
-        'position',
-        0 * Float32Array.BYTES_PER_ELEMENT,
-        3 * Float32Array.BYTES_PER_ELEMENT,
-        'float32x3',
-      )
-      .addAttribute(
-        'uv',
-        3 * Float32Array.BYTES_PER_ELEMENT,
-        2 * Float32Array.BYTES_PER_ELEMENT,
-        'float32x2',
-      )
-    const indexBuffer = new IndexBuffer(renderer.device, {
-      typedArray: indicesArray,
-    })
-    debugPlaneGeometry.addVertexBuffer(vertexBuffer).addIndexBuffer(indexBuffer)
-  }
-  const debugShadowMesh = new Mesh(renderer.device, {
-    // debugVertexShader: true,
-    // debugFragmentShader: true,
-    geometry: debugPlaneGeometry,
-    ubos: [],
-    samplers: [renderer.depthDebugSampler],
-    textures: [renderer.shadowDepthTexture],
-    vertexShaderSource: {
-      main: `
-        output.Position = vec4(input.position, 1.0);
-        output.uv = input.uv;
-      `,
-    },
-    fragmentShaderSource: {
-      head: `
-        fn LinearizeDepth(depth: f32) -> f32 {
-            let z = depth * 2.0 - 1.0; // Back to NDC 
-            let near_plane = 0.1;
-            let far_plane = 40.0;
-            return (2.0 * near_plane * far_plane) / (far_plane + near_plane - z * (far_plane - near_plane));
-        }
-      `,
-      main: `
-        let depth: f32 = textureSample(
-          shadowDepthTexture,
-          depthDebugSampler,
-          vec2(input.uv.x, input.uv.y)
-        );
-        output.Color = vec4(vec3(depth), 1.0);
-        // output.Color = vec4(vec3(LinearizeDepth(depth)), 1.0);
-
-        // output.Color = vec4(input.uv, 0.0, 1.0);
-      `,
-    },
-
-    multisample: {
-      count: SAMPLE_COUNT,
-    },
-    targets: [
-      {
-        format: 'bgra8unorm',
-      },
-    ],
-  })
+  const debugShadowMesh = new ShadowMapDebugger(renderer)
+		.setPosition({
+			x: innerWidth / 2 - ShadowMapDebugger.OUTPUT_SIZE / 2,
+			y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2
+		})
+		.updateWorldMatrix()
 
   requestAnimationFrame(renderFrame)
 
@@ -276,7 +216,7 @@ const FIRE_EMITTERS = [
       node.render(renderPass)
     })
 
-    // debugShadowMesh.render(renderPass)
+    debugShadowMesh.render(renderPass)
 
     renderPass.end()
 

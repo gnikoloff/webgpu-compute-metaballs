@@ -29,6 +29,8 @@ export default class WebGPURenderer {
 
   projectionUBO!: UniformBuffer
   viewUBO!: UniformBuffer
+	screenProjectionUBO!: UniformBuffer
+	screenViewUBO: UniformBuffer
   shadowProjectionUBO!: UniformBuffer
   shadowViewUBO!: UniformBuffer
 
@@ -127,6 +129,22 @@ export default class WebGPURenderer {
       name: 'ShadowViewUniforms',
       uniforms: viewUBOUniformDefinition,
     })
+		this.screenProjectionUBO = new UniformBuffer(this.device, {
+			name: 'ScreenProjectionUniforms',
+			uniforms: {
+				matrix: {
+					type: 'mat4x4<f32>',
+				},
+			}
+		})
+		this.screenViewUBO = new UniformBuffer(this.device, {
+			name: 'ScreenViewUniforms',
+			uniforms: {
+				matrix: {
+					type: 'mat4x4<f32>',
+				},
+			}
+		})
 
     const presentationFormat = this.context.getPreferredFormat(this.adapter)
     this.context.configure({
@@ -217,6 +235,11 @@ export default class WebGPURenderer {
     this.bindGroups.shadow.addUBO(this.shadowProjectionUBO)
     this.bindGroups.shadow.addUBO(this.shadowViewUBO)
     this.bindGroups.shadow.init()
+
+		this.bindGroups.screenOrthoFrame = new BindGroup(this.device, 0)
+		this.bindGroups.screenOrthoFrame.addUBO(this.screenProjectionUBO)
+		this.bindGroups.screenOrthoFrame.addUBO(this.screenViewUBO)
+		this.bindGroups.screenOrthoFrame.init()
   }
 
   onRender() {
