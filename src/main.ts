@@ -122,7 +122,6 @@ const FIRE_EMITTERS = [
   for (let i = 0; i < FIRE_EMITTERS.length; i++) {
     const fireEmitter = new FireEmitter(renderer)
 		fireEmitter.name = 'fire-emitter-' + i
-		fireEmitter.renderOrder = i
     const { pos, scale } = FIRE_EMITTERS[i]
     fireEmitter.setPosition(pos).setScale(scale).updateWorldMatrix()
     transparentRoot.addChild(fireEmitter)
