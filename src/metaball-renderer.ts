@@ -323,15 +323,15 @@ export default class MetaballRenderer extends SceneObject {
         depthStencil: {
           format: DEPTH_FORMAT,
           depthWriteEnabled: true,
-          depthCompare: 'less',
+          depthCompare: 'always',
         },
         primitive: {
           topology: 'triangle-list',
           cullMode: 'none',
         },
-        multisample: {
-          count: SAMPLE_COUNT,
-        },
+        // multisample: {
+        //   count: SAMPLE_COUNT,
+        // },
       })
   }
 

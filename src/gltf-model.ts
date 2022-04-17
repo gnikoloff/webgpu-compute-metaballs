@@ -18,10 +18,10 @@ import {
 import WebGPURenderer from './webgpu-renderer'
 
 import {
-  MAKE_GLTF_MODEL_FRAGMENT_SHADER,
-  MAKE_GLTF_MODEL_VERTEX_SHADER,
-  SHADOW_FRAGMENT_SHADER,
-  SHADOW_VERTEX_SHADER,
+  makeGLTFModelFragmentShader,
+  makeGLTFModelVertexShader,
+  gltfModelShadowFragmentShader,
+  gltfModelShadowVertexShader,
 } from './shaders/gltf-model'
 
 import {
@@ -191,20 +191,22 @@ export default class GLTFModel extends SceneObject {
               this.modelUBO,
             ],
             vertexShaderSource: {
-              main: SHADOW_VERTEX_SHADER,
+              main: gltfModelShadowVertexShader,
             },
             fragmentShaderSource: {
-              main: SHADOW_FRAGMENT_SHADER,
+              main: gltfModelShadowFragmentShader,
             },
             targets: [],
             depthStencil: {
               depthWriteEnabled: true,
-              depthCompare: 'less',
+              depthCompare: 'always',
               format: 'depth32float',
             },
+						label: 'shadow mesh node',
           })
           shadowNode.setParent(shadowParentNode)
 					// console.log(primitive.material)
+					
           currentNode = new Mesh(this.renderer.device, {
             geometry,
             ubos: [
@@ -231,7 +233,7 @@ export default class GLTFModel extends SceneObject {
                   format: 'float32x4',
                 },
               },
-              main: MAKE_GLTF_MODEL_VERTEX_SHADER({
+              main: makeGLTFModelVertexShader({
                 useNormalMap: !!primitive.attributes.TANGENT,
               }),
             },
@@ -247,6 +249,14 @@ export default class GLTFModel extends SceneObject {
                   format: 'float32x4',
                 },
               },
+							outputs: {
+								normal: {
+									format: 'float32x4',
+								},
+								albedo: {
+									format: 'float32x4',
+								},
+							},
               head: `
                 let PI = ${Math.PI};
                 ${POINT_LIGHT_SHADER_STRUCT}
@@ -259,7 +269,7 @@ export default class GLTFModel extends SceneObject {
                 ${LIGHT_RADIANCE_PBR_SHADER_FN}
                 ${LINEAR_TO_SRGB_SHADER_FN}
               `,
-              main: MAKE_GLTF_MODEL_FRAGMENT_SHADER({
+              main: makeGLTFModelFragmentShader({
                 baseColorFactor:
                   primitive.material.pbrMetallicRoughness.baseColorFactor,
                 useNormalMap: !!primitive.attributes.TANGENT,
@@ -271,13 +281,17 @@ export default class GLTFModel extends SceneObject {
                     .metallicRoughnessTexture,
               }),
             },
-            multisample: {
-              count: SAMPLE_COUNT,
-            },
+            // multisample: {
+            //   count: SAMPLE_COUNT,
+            // },
             targets: [
-              {
-                format: 'bgra8unorm',
-                blend: {
+              { format: 'rgba32float' },
+							// normal
+							{ format: 'rgba32float' },
+							// albedo
+							{
+								format: 'bgra8unorm',
+								blend: {
                   color: {
 										srcFactor: 'src-alpha',
 										dstFactor: 'one-minus-src-alpha',
@@ -289,8 +303,9 @@ export default class GLTFModel extends SceneObject {
 										operation: 'add',
 									},
                 },
-              },
+							},
             ],
+						label: 'display mesh node',
           })
           if (primitive.material.alphaMode === 'MASK') {
             currentNode.setParent(transparentRootNode)

@@ -25,7 +25,10 @@ export default class WebGPURenderer {
   device!: GPUDevice
   colorAttachment!: GPURenderPassColorAttachment
   depthAndStencilAttachment!: GPURenderPassDepthStencilAttachment
+	
+	depthTexture: Texture
   shadowDepthTexture: Texture
+	gbufferDepthTexture: Texture
 
   projectionUBO!: UniformBuffer
   viewUBO!: UniformBuffer
@@ -177,7 +180,7 @@ export default class WebGPURenderer {
       storeOp: 'discard',
     }
 
-    const depthTexture = new Texture(
+    this.depthTexture = new Texture(
       this.device,
       'depthTexture',
       'depth',
@@ -190,6 +193,12 @@ export default class WebGPURenderer {
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     })
 
+		this.gbufferDepthTexture = new Texture(this.device, 'gBufferDepth').fromDefinition({
+			size: [...this.outputSize, 1],
+			format: 'depth24plus',
+			usage: GPUTextureUsage.RENDER_ATTACHMENT,
+		})
+
     // const depthTexture = this.device.createTexture({
     //   size: { width: this.outputSize[0], height: this.outputSize[1] },
     //   sampleCount: SAMPLE_COUNT,
@@ -198,7 +207,7 @@ export default class WebGPURenderer {
     // })
 
     this.depthAndStencilAttachment = {
-      view: depthTexture.get().createView(),
+      view: this.depthTexture.get().createView(),
       depthLoadValue: 1,
       depthStoreOp: 'discard',
     }

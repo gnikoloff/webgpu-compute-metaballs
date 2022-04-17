@@ -1,6 +1,6 @@
-import { DEPTH_FORMAT } from './constants'
-import { ProjectionUniforms, ViewUniforms } from './shaders/shared'
-import WebGPURenderer from './webgpu-renderer'
+import { DEPTH_FORMAT } from '../constants'
+import { ProjectionUniforms, ViewUniforms } from '../shaders/shared'
+import WebGPURenderer from '../webgpu-renderer'
 
 export default class HelperGrid {
   renderer: WebGPURenderer
@@ -111,7 +111,7 @@ export default class HelperGrid {
       depthStencil: {
         format: DEPTH_FORMAT,
         depthWriteEnabled: true,
-        depthCompare: 'less',
+        depthCompare: 'always',
       },
       multisample: {
         count: 4,

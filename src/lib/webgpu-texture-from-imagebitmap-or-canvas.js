@@ -43,8 +43,8 @@ function webGPUGenerateMipmap(gpuDevice, texture, textureDescriptor) {
         vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0));
 
       struct VertexOutput {
-        @builtin(position) position : vec4<f32>;
-        @location(0) texCoord : vec2<f32>;
+        @builtin(position) position : vec4<f32>,
+        @location(0) texCoord : vec2<f32>,
       };
 
       @stage(vertex) fn vertexMain(@builtin(vertex_index) vertexIndex : u32) -> VertexOutput {

@@ -24,11 +24,12 @@ const FRAGMENT_SHADER_SRC = `
 `
 
 export default class ShadowMapDebugger extends Mesh {
-	static readonly OUTPUT_SIZE = 256
+	public static readonly OUTPUT_SIZE = 256
 
-	modelUBO: UniformBuffer
+	private modelUBO: UniformBuffer
+	
 	constructor(renderer: WebGPURenderer) {
-		const debugPlaneGeometry = new Geometry()
+		const geometry = new Geometry()
 		const { vertexStride, interleavedArray, indicesArray } =
       GeometryUtils.createInterleavedPlane({
         width: ShadowMapDebugger.OUTPUT_SIZE,
@@ -54,7 +55,7 @@ export default class ShadowMapDebugger extends Mesh {
     const indexBuffer = new IndexBuffer(renderer.device, {
       typedArray: indicesArray,
     })
-    debugPlaneGeometry
+    geometry
 			.addVertexBuffer(vertexBuffer)
 			.addIndexBuffer(indexBuffer)
 
@@ -70,7 +71,7 @@ export default class ShadowMapDebugger extends Mesh {
 		})
 		
 		super(renderer.device, {
-			geometry: debugPlaneGeometry,
+			geometry: geometry,
 			ubos: [
 				renderer.screenProjectionUBO,
 				renderer.screenViewUBO,
@@ -86,9 +87,9 @@ export default class ShadowMapDebugger extends Mesh {
 				main: FRAGMENT_SHADER_SRC,
 			},
 
-			multisample: {
-				count: SAMPLE_COUNT,
-			},
+			// multisample: {
+			// 	count: SAMPLE_COUNT,
+			// },
 			targets: [
 				{
 					format: 'bgra8unorm',

@@ -1,7 +1,7 @@
 import { SHADOW_MAP_SIZE } from '../constants'
 import { convertNumberArrToWGLSLVec } from '../helpers'
 
-export const MAKE_GLTF_MODEL_VERTEX_SHADER = ({
+export const makeGLTFModelVertexShader = ({
   useNormalMap,
 }: {
   useNormalMap: boolean
@@ -29,16 +29,16 @@ export const MAKE_GLTF_MODEL_VERTEX_SHADER = ({
   } 
 `
 
-export const SHADOW_VERTEX_SHADER = `
+export const gltfModelShadowVertexShader = `
   let worldPos = model.matrix * vec4(input.position, 1.0);
   output.Position = shadowprojectionuniforms.matrix * shadowviewuniforms.matrix * worldPos;
 `
 
-export const SHADOW_FRAGMENT_SHADER = `
+export const gltfModelShadowFragmentShader = `
   output.Color = vec4<f32>(1.0);
 `
 
-export const MAKE_GLTF_MODEL_FRAGMENT_SHADER = ({
+export const makeGLTFModelFragmentShader = ({
   baseColorFactor,
   useAlbedoTexture,
   useNormalTexture,
@@ -176,7 +176,11 @@ export const MAKE_GLTF_MODEL_FRAGMENT_SHADER = ({
     let color = linearTosRGB(ambient + Lo);
 		
 
-    output.Color = vec4(color, surface.albedo.a);
+		// hack - this is actually the position
+    output.Color = vec4(input.worldPosition, 1.0);
+		output.normal = vec4(surface.N, 1.0);
+		// output.albedo = vec4(color, surface.albedo.a);
+		output.albedo = surface.albedo;
   `
 
   return source

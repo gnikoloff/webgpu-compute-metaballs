@@ -1,4 +1,4 @@
-export const FIRE_EMITTER_VERTEX = `
+export const FireEmitterVertex = `
   let startPos = vec4(input.position.xy, 0.0, 1.0);
   var endPos = startPos;
   endPos.y = endPos.y + 5.0;
@@ -23,7 +23,7 @@ export const FIRE_EMITTER_VERTEX = `
   output.Position = projectionuniforms.matrix * viewuniforms.matrix * worldPos;
 `
 
-export const FIRE_EMITTER_FRAGMENT = `
+export const FireEmitterFragment = `
   let dist = distance(input.position, vec2(0.0)) * 2.0;
   output.Color = vec4(1.0, 1.0, 1.0, clamp(1.0 - dist, 0.0, 1.0));
 `

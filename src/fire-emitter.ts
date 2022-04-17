@@ -9,8 +9,8 @@ import {
   IndexBuffer,
 } from './lib/hwoa-rang-gpu/'
 import {
-  FIRE_EMITTER_FRAGMENT,
-  FIRE_EMITTER_VERTEX,
+  FireEmitterFragment,
+  FireEmitterVertex,
 } from './shaders/fire-emitter'
 import WebGPURenderer from './webgpu-renderer'
 
@@ -65,14 +65,14 @@ export default class FireEmitter extends SceneObject {
       geometry,
       ubos: [this.renderer.projectionUBO, this.renderer.viewUBO, this.modelUBO],
       vertexShaderSource: {
-        main: FIRE_EMITTER_VERTEX,
+        main: FireEmitterVertex,
       },
       fragmentShaderSource: {
-        main: FIRE_EMITTER_FRAGMENT,
+        main: FireEmitterFragment,
       },
-      multisample: {
-        count: SAMPLE_COUNT,
-      },
+      // multisample: {
+      //   count: SAMPLE_COUNT,
+      // },
       targets: [
         {
           format: 'bgra8unorm',

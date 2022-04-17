@@ -1,14 +1,10 @@
-import HelperGrid from './helper-grid'
+import HelperGrid from './debug/helper-grid'
 import { VolumeSettings } from './interfaces'
 import {
   PerspectiveCamera,
   CameraController,
   SceneObject,
   Mesh,
-  Geometry,
-  GeometryUtils,
-  VertexBuffer,
-  IndexBuffer,
 	OrthographicCamera,
 } from './lib/hwoa-rang-gpu'
 import MetaballRenderer from './metaball-renderer'
@@ -17,6 +13,7 @@ import FireEmitter from './fire-emitter'
 
 import WebGPURenderer from './webgpu-renderer'
 import ShadowMapDebugger from './debug/shadow-map-debugger'
+import DeferredPass from './postfx/deferred-pass'
 
 const FIRE_EMITTERS = [
   {
@@ -61,7 +58,7 @@ const FIRE_EMITTERS = [
     .lookAt({ x: 0, y: 1, z: 0 })
 
   const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -200, 200)
-    .setPosition({ x: 2, y: 20, z: 0 })
+    .setPosition({ x: 0.1, y: 20, z: 0 })
     .lookAt({ x: 0, y: 1, z: 0 })
 	
 	const screenOrthoCamera = new OrthographicCamera(-innerWidth / 2, innerWidth / 2, innerHeight / 2, -innerHeight / 2, 0, 2)
@@ -131,7 +128,7 @@ const FIRE_EMITTERS = [
 		fireEmitter.name = 'fire-emitter-' + i
     const { pos, scale } = FIRE_EMITTERS[i]
     fireEmitter.setPosition(pos).setScale(scale).updateWorldMatrix()
-    transparentRoot.addChild(fireEmitter)
+    // transparentRoot.addChild(fireEmitter)
     fireEmitters.push(fireEmitter)
   }
 
@@ -142,6 +139,10 @@ const FIRE_EMITTERS = [
 			y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2
 		})
 		.updateWorldMatrix()
+
+	// GBuffer
+	const deferredPass = new DeferredPass(renderer)
+  
 
   requestAnimationFrame(renderFrame)
 
@@ -194,29 +195,38 @@ const FIRE_EMITTERS = [
 
     shadowRenderPass.end()
 
-    const renderPass = commandEncoder.beginRenderPass({
-      label: 'draw default framebuffer',
-      colorAttachments: [renderer.colorAttachment],
-      depthStencilAttachment: renderer.depthAndStencilAttachment,
-    })
-
-    gridHelper.render(renderPass)
-    metaballs.render(renderPass)
+		const gBufferPass = commandEncoder.beginRenderPass({
+			...deferredPass.framebufferDescriptor,
+			label: 'gbuffer'
+		})
+    // metaballs.render(gBufferPass)
 
     opaqueRoot.traverse((node) => {
       if (!(node instanceof Mesh)) {
         return
       }
-      node.render(renderPass)
+      node.render(gBufferPass)
     })
     transparentRoot.traverse((node) => {
       if (!(node instanceof Mesh)) {
         return
       }
-      node.render(renderPass)
+      node.render(gBufferPass)
+    })
+		gBufferPass.end()
+
+		const swapChainTexture = renderer.context.getCurrentTexture()
+    const renderPass = commandEncoder.beginRenderPass({
+      label: 'draw default framebuffer',
+      colorAttachments: [
+        renderer.colorAttachment
+      ],
+      depthStencilAttachment: renderer.depthAndStencilAttachment,
     })
 
-    debugShadowMesh.render(renderPass)
+		deferredPass.render(renderPass)
+    // gridHelper.render(renderPass)
+    // debugShadowMesh.render(renderPass)
 
     renderPass.end()
 
