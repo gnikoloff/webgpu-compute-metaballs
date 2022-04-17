@@ -36,7 +36,7 @@ import {
   SURFACE_SHADER_STRUCT,
 } from './shaders/pbr'
 
-import gltfModelURL from './assets/sponza/sponza.glb'
+import gltfModelURL from './assets/sponza/sponza-compressed.glb'
 import { mat4 } from 'gl-matrix'
 
 const attribNameToShaderNames = new Map([
@@ -86,6 +86,8 @@ export default class GLTFModel extends SceneObject {
 
       let currentNode: SceneObject
       let shadowNode: SceneObject
+
+			console.log(gltfNode)
 
       if (gltfNode.mesh) {
         // console.log(gltfNode.mesh)
@@ -202,7 +204,7 @@ export default class GLTFModel extends SceneObject {
             },
           })
           shadowNode.setParent(shadowParentNode)
-
+					console.log(primitive.material)
           currentNode = new Mesh(this.renderer.device, {
             geometry,
             ubos: [
@@ -277,12 +279,15 @@ export default class GLTFModel extends SceneObject {
                 format: 'bgra8unorm',
                 blend: {
                   color: {
-                    srcFactor: 'src-alpha',
-                    dstFactor: 'one-minus-src-alpha',
-                  },
-                  alpha: {
-                    // dstFactor: 'src-alpha',
-                  },
+										srcFactor: 'src-alpha',
+										dstFactor: 'one-minus-src-alpha',
+										operation: 'add',
+									},
+									alpha: {
+										srcFactor: 'src-alpha',
+										dstFactor: 'one-minus-src-alpha',
+										operation: 'add',
+									},
                 },
               },
             ],
