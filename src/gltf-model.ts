@@ -87,7 +87,7 @@ export default class GLTFModel extends SceneObject {
       let currentNode: SceneObject
       let shadowNode: SceneObject
 
-			console.log(gltfNode)
+			// console.log(gltfNode)
 
       if (gltfNode.mesh) {
         // console.log(gltfNode.mesh)
@@ -204,7 +204,7 @@ export default class GLTFModel extends SceneObject {
             },
           })
           shadowNode.setParent(shadowParentNode)
-					console.log(primitive.material)
+					// console.log(primitive.material)
           currentNode = new Mesh(this.renderer.device, {
             geometry,
             ubos: [

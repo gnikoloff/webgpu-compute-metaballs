@@ -96,7 +96,7 @@ export default class FireEmitter extends SceneObject {
 
     // this.updateWorldMatrix()
 
-    console.log(this.modelMatrix)
+    // console.log(this.modelMatrix)
   }
   updateWorldMatrix(parentWorldMatrix?: mat4): this {
     super.updateWorldMatrix(parentWorldMatrix)
