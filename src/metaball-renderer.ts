@@ -278,7 +278,7 @@ export default class MetaballRenderer extends SceneObject {
           label: 'metaball rendering pipeline layout',
           bindGroupLayouts: [
             this.renderer.bindGroups.frame.getLayout(),
-            this.modelBindGroup.getLayout(0),
+            this.modelBindGroup.getLayout(),
           ],
         }),
         vertex: {
@@ -315,9 +315,13 @@ export default class MetaballRenderer extends SceneObject {
             code: METABALLS_FRAGMENT_SHADER,
           }),
           targets: [
-            {
-              format: this.renderer.presentationFormat,
-            },
+            { format: 'rgba32float' },
+						// normal
+						{ format: 'rgba32float' },
+						// albedo
+						{
+							format: 'bgra8unorm',
+						},
           ],
         },
         depthStencil: {
@@ -329,9 +333,9 @@ export default class MetaballRenderer extends SceneObject {
           topology: 'triangle-list',
           cullMode: 'none',
         },
-        // multisample: {
-        //   count: SAMPLE_COUNT,
-        // },
+        multisample: {
+          count: 1,
+        },
       })
   }
 

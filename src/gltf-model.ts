@@ -3,8 +3,6 @@ import { GLTFLoader } from '@loaders.gl/gltf/dist/esm/gltf-loader'
 
 import { webGPUTextureFromImageBitmapOrCanvas } from './lib/webgpu-texture-from-imagebitmap-or-canvas'
 
-import { SAMPLE_COUNT } from './constants'
-
 import {
   SceneObject,
   Geometry,
@@ -24,17 +22,6 @@ import {
   gltfModelShadowVertexShader,
 } from './shaders/gltf-model'
 
-import {
-  DIRECTIONAL_LIGHT_SHADER_STRUCT,
-  DISTRIBUTION_GGX_PBR_SHADER_FN,
-  FRESNEL_SCHLICK_PBR_SHADER_FN,
-  GEOMETRY_SMITH_PBR_SHADER_FN,
-  LIGHT_RADIANCE_PBR_SHADER_FN,
-  LINEAR_TO_SRGB_SHADER_FN,
-  POINT_LIGHT_SHADER_STRUCT,
-  REINHARD_TONEMAPPING_PBR_SHADER_FN,
-  SURFACE_SHADER_STRUCT,
-} from './shaders/pbr'
 
 import gltfModelURL from './assets/sponza/sponza-compressed.glb'
 import { mat4 } from 'gl-matrix'
@@ -199,11 +186,12 @@ export default class GLTFModel extends SceneObject {
             targets: [],
             depthStencil: {
               depthWriteEnabled: true,
-              depthCompare: 'always',
+              depthCompare: 'less',
               format: 'depth32float',
             },
 						label: 'shadow mesh node',
           })
+					shadowNode.setScale({x: 0.1, y: 0.1, z: 0.1})
           shadowNode.setParent(shadowParentNode)
 					// console.log(primitive.material)
 					
@@ -212,15 +200,12 @@ export default class GLTFModel extends SceneObject {
             ubos: [
               this.renderer.projectionUBO,
               this.renderer.viewUBO,
-              this.renderer.shadowProjectionUBO,
-              this.renderer.shadowViewUBO,
               this.modelUBO,
             ],
             samplers: [
               this.renderer.defaultSampler,
-              this.renderer.depthSampler,
             ],
-            textures: [...textures, this.renderer.shadowDepthTexture],
+            textures: [...textures],
             vertexShaderSource: {
               outputs: {
                 worldPosition: {
@@ -228,9 +213,6 @@ export default class GLTFModel extends SceneObject {
                 },
                 bitangent: {
                   format: 'float32x3',
-                },
-                shadowPos: {
-                  format: 'float32x4',
                 },
               },
               main: makeGLTFModelVertexShader({
@@ -245,9 +227,6 @@ export default class GLTFModel extends SceneObject {
                 bitangent: {
                   format: 'float32x3',
                 },
-                shadowPos: {
-                  format: 'float32x4',
-                },
               },
 							outputs: {
 								normal: {
@@ -257,18 +236,6 @@ export default class GLTFModel extends SceneObject {
 									format: 'float32x4',
 								},
 							},
-              head: `
-                let PI = ${Math.PI};
-                ${POINT_LIGHT_SHADER_STRUCT}
-                ${DIRECTIONAL_LIGHT_SHADER_STRUCT}
-                ${SURFACE_SHADER_STRUCT}
-                ${DISTRIBUTION_GGX_PBR_SHADER_FN}
-                ${GEOMETRY_SMITH_PBR_SHADER_FN}
-                ${FRESNEL_SCHLICK_PBR_SHADER_FN}
-                ${REINHARD_TONEMAPPING_PBR_SHADER_FN}
-                ${LIGHT_RADIANCE_PBR_SHADER_FN}
-                ${LINEAR_TO_SRGB_SHADER_FN}
-              `,
               main: makeGLTFModelFragmentShader({
                 baseColorFactor:
                   primitive.material.pbrMetallicRoughness.baseColorFactor,
@@ -284,6 +251,11 @@ export default class GLTFModel extends SceneObject {
             // multisample: {
             //   count: SAMPLE_COUNT,
             // },
+						depthStencil: {
+							format: 'depth24plus',
+							depthWriteEnabled: true,
+							depthCompare: 'less',
+						},
             targets: [
               { format: 'rgba32float' },
 							// normal
@@ -293,12 +265,12 @@ export default class GLTFModel extends SceneObject {
 								format: 'bgra8unorm',
 								blend: {
                   color: {
-										srcFactor: 'src-alpha',
+										srcFactor: 'one',
 										dstFactor: 'one-minus-src-alpha',
 										operation: 'add',
 									},
 									alpha: {
-										srcFactor: 'src-alpha',
+										srcFactor: 'one',
 										dstFactor: 'one-minus-src-alpha',
 										operation: 'add',
 									},

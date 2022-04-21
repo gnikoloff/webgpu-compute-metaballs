@@ -161,7 +161,7 @@ export default class WebGPURenderer {
       'float',
       '2d',
     ).fromDefinition({
-      size: { width: this.outputSize[0], height: this.outputSize[1] },
+      size: { width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio },
       sampleCount: SAMPLE_COUNT,
       format: presentationFormat,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -177,7 +177,7 @@ export default class WebGPURenderer {
         a: BACKGROUND_COLOR[3],
       },
       loadOp: 'clear',
-      storeOp: 'discard',
+      storeOp: 'store',
     }
 
     this.depthTexture = new Texture(
@@ -187,7 +187,7 @@ export default class WebGPURenderer {
       '2d',
       'texture_depth_2d',
     ).fromDefinition({
-      size: { width: this.outputSize[0], height: this.outputSize[1] },
+      size: { width: this.outputSize[0] * devicePixelRatio, height: this.outputSize[1] * devicePixelRatio },
       sampleCount: SAMPLE_COUNT,
       format: DEPTH_FORMAT,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -208,7 +208,7 @@ export default class WebGPURenderer {
 
     this.depthAndStencilAttachment = {
       view: this.depthTexture.get().createView(),
-      depthLoadValue: 1,
+      depthLoadOp: 'clear',
       depthStoreOp: 'discard',
     }
 
@@ -230,9 +230,9 @@ export default class WebGPURenderer {
       'depthSampler',
       'comparison',
       'sampler_comparison',
-      {
-        compare: 'less',
-      },
+			{
+				compare: 'less',
+			}
     )
 
     this.bindGroups.frame = new BindGroup(this.device, 0)

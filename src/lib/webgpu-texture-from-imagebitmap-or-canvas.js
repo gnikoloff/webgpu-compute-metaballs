@@ -103,7 +103,8 @@ function webGPUGenerateMipmap(gpuDevice, texture, textureDescriptor) {
       colorAttachments: [
         {
           view: dstView, // Render pass uses the next mip level as it's render attachment.
-          loadValue: [0, 0, 0, 0],
+          clearValue: [0, 0, 0, 0],
+					loadOp: 'clear',
           storeOp: 'store',
         },
       ],

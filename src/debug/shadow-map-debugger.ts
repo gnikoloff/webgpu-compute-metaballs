@@ -1,5 +1,5 @@
 import { SAMPLE_COUNT } from '../constants'
-import { Geometry, GeometryUtils, IndexBuffer, Mesh, Sampler, Texture, UniformBuffer, VertexBuffer } from '../lib/hwoa-rang-gpu'
+import { Geometry, GeometryUtils, IndexBuffer, Mesh, UniformBuffer, VertexBuffer } from '../lib/hwoa-rang-gpu'
 import { LinearizeDepthSnippet } from '../shaders/shared'
 import WebGPURenderer from '../webgpu-renderer'
 
@@ -87,16 +87,22 @@ export default class ShadowMapDebugger extends Mesh {
 				main: FRAGMENT_SHADER_SRC,
 			},
 
-			// multisample: {
-			// 	count: SAMPLE_COUNT,
-			// },
+			multisample: {
+				count: SAMPLE_COUNT,
+			},
 			targets: [
 				{
 					format: 'bgra8unorm',
 				},
 			],
+			// depthStencil: {
+      //   format: 'depth24plus',
+      //   depthWriteEnabled: true,
+      //   depthCompare: 'greater',
+      // },
 		})
 		this.modelUBO = modelUBO
+		// this.setPosition({ z: 0.5 }).updateWorldMatrix()
 	}
 	render(renderPass: GPURenderPassEncoder) {
 		super.render(renderPass)

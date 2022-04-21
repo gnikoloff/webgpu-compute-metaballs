@@ -109,18 +109,18 @@ export const LIGHT_RADIANCE_PBR_SHADER_FN = `
     let G = GeometrySmith(surface.N, surface.V, L, surface.roughness);
     let F = FresnelSchlick(max(dot(H, surface.V), 0.0), surface.F0);
 
-    let kD = (vec3<f32>(1.0, 1.0, 1.0) - F) * (1.0 - surface.metallic);
+    let kD = (vec3(1.0, 1.0, 1.0) - F) * (1.0 - surface.metallic);
 
     let NdotL = max(dot(surface.N, L), 0.0);
 
     let numerator = NDF * G * F;
     let denominator = max(4.0 * max(dot(surface.N, surface.V), 0.0) * NdotL, 0.001);
-    let specular = numerator / vec3<f32>(denominator, denominator, denominator);
+    let specular = numerator / vec3(denominator, denominator, denominator);
 
     // add to outgoing radiance Lo
     let attenuation = rangeAttenuation(light.range, distance);
     let radiance = light.color * light.intensity * attenuation;
-    return (kD * surface.albedo.rgb / vec3<f32>(PI, PI, PI) + specular) * radiance * NdotL;
+    return (kD * surface.albedo.rgb / vec3(PI, PI, PI) + specular) * radiance * NdotL;
   }
 
   fn DirectionalLightRadiance(light : DirectionalLight, surface : Surface) -> vec3<f32> {
@@ -132,24 +132,24 @@ export const LIGHT_RADIANCE_PBR_SHADER_FN = `
     let G = GeometrySmith(surface.N, surface.V, L, surface.roughness);
     let F = FresnelSchlick(max(dot(H, surface.V), 0.0), surface.F0);
 
-    let kD = (vec3<f32>(1.0, 1.0, 1.0) - F) * (1.0 - surface.metallic);
+    let kD = (vec3(1.0, 1.0, 1.0) - F) * (1.0 - surface.metallic);
 
     let NdotL = max(dot(surface.N, L), 0.0);
 
     let numerator = NDF * G * F;
     let denominator = max(4.0 * max(dot(surface.N, surface.V), 0.0) * NdotL, 0.001);
-    let specular = numerator / vec3<f32>(denominator, denominator, denominator);
+    let specular = numerator / vec3(denominator, denominator, denominator);
 
     // add to outgoing radiance Lo
     let radiance = light.color;
-    return (kD * surface.albedo.rgb / vec3<f32>(PI, PI, PI) + specular) * radiance * NdotL;
+    return (kD * surface.albedo.rgb / vec3(PI, PI, PI) + specular) * radiance * NdotL;
   }
 `
 
 // see http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
 export const LINEAR_TO_SRGB_SHADER_FN = `
   let GAMMA = 2.2;
-  fn linearTosRGB(linear : vec3<f32>) -> vec3<f32> {
+  fn linearTosRGB(linear: vec3<f32>) -> vec3<f32> {
     let INV_GAMMA = 1.0 / GAMMA;
     return pow(linear, vec3<f32>(INV_GAMMA, INV_GAMMA, INV_GAMMA));
   }

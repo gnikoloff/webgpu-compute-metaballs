@@ -1,4 +1,4 @@
-import { DEPTH_FORMAT } from '../constants'
+import { DEPTH_FORMAT, SAMPLE_COUNT } from '../constants'
 import { ProjectionUniforms, ViewUniforms } from '../shaders/shared'
 import WebGPURenderer from '../webgpu-renderer'
 
@@ -114,7 +114,7 @@ export default class HelperGrid {
         depthCompare: 'always',
       },
       multisample: {
-        count: 4,
+        count: SAMPLE_COUNT,
       },
     })
   }

@@ -7,6 +7,7 @@ interface IEffect {
 	fragmentShaderSource: ShaderDefinition
 	textures?: Texture[]
 	samplers?: Sampler[]
+	ubos?: UniformBuffer[]
 }
 
 export default class Effect extends Mesh {
@@ -19,12 +20,13 @@ export default class Effect extends Mesh {
 		fragmentShaderSource,
 		textures = [],
 		samplers = [],
+		ubos = [],
 	}: IEffect) {
 		const geometry = new Geometry()
 		const { vertexStride, interleavedArray, indicesArray } =
       GeometryUtils.createInterleavedPlane({
-        width: innerWidth,
-        height: innerHeight,
+        width: innerWidth * devicePixelRatio,
+        height: innerHeight * devicePixelRatio,
       })
     const vertexBuffer = new VertexBuffer(renderer.device, {
       bindPointIdx: 0,
@@ -62,6 +64,7 @@ export default class Effect extends Mesh {
 		super(renderer.device, {
 			geometry: geometry,
 			ubos: [
+				...ubos,
 				renderer.screenProjectionUBO,
 				renderer.screenViewUBO,
 				modelUBO,
@@ -74,6 +77,11 @@ export default class Effect extends Mesh {
 			multisample: {
 				count: SAMPLE_COUNT,
 			},
+			// depthStencil: {
+      //   format: 'depth24plus',
+      //   depthWriteEnabled: true,
+      //   depthCompare: 'greater',
+      // },
 			targets: [
 				{
 					format: 'bgra8unorm',
