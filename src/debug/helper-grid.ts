@@ -1,4 +1,4 @@
-import { DEPTH_FORMAT, SAMPLE_COUNT } from '../constants'
+import { DEPTH_FORMAT } from '../constants'
 import { ProjectionUniforms, ViewUniforms } from '../shaders/shared'
 import WebGPURenderer from '../webgpu-renderer'
 
@@ -65,7 +65,7 @@ export default class HelperGrid {
           @stage(vertex)
           fn main(input: Inputs) -> VertexOutput {
             var output: VertexOutput;
-            output.position = projection.matrix * view.matrix * vec4<f32>(input.position, 1.0);
+            output.position = projection.matrix * view.matrix * vec4(input.position, 1.0);
             return output;
           }
         `,
@@ -93,7 +93,7 @@ export default class HelperGrid {
           @stage(fragment)
           fn main() -> Output {
             var output: Output;
-            output.Color = vec4<f32>(1.0, 1.0, 1.0, 1.0);
+            output.Color = vec4(1.0, 1.0, 1.0, 1.0);
             return output;
           }
         `,
@@ -112,9 +112,6 @@ export default class HelperGrid {
         format: DEPTH_FORMAT,
         depthWriteEnabled: true,
         depthCompare: 'always',
-      },
-      multisample: {
-        count: SAMPLE_COUNT,
       },
     })
   }

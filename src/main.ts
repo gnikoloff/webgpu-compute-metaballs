@@ -5,35 +5,13 @@ import {
   CameraController,
   SceneObject,
   Mesh,
-	OrthographicCamera,
+  OrthographicCamera,
 } from './lib/hwoa-rang-gpu'
 import MetaballRenderer from './metaball-renderer'
-import GLTFModel from './gltf-model'
-import FireEmitter from './fire-emitter'
 
 import WebGPURenderer from './webgpu-renderer'
 import ShadowMapDebugger from './debug/shadow-map-debugger'
 import DeferredPass from './postfx/deferred-pass'
-
-const FIRE_EMITTERS = [
-  {
-    pos: { x: -2.8, y: 1.9, z: 9.4 },
-    scale: { x: 0.1, y: 0.1, z: 0.1 },
-  },
-  {
-    pos: { x: 2.6, y: 1.9, z: 9.4 },
-    scale: { x: 0.1, y: 0.1, z: 0.1 },
-  },
-  {
-    pos: { x: -2.8, y: 1.9, z: -7.5 },
-    scale: { x: 0.1, y: 0.1, z: 0.1 },
-  },
-  {
-    pos: { x: 2.6, y: 1.9, z: -7.5 },
-    scale: { x: 0.1, y: 0.1, z: 0.1 },
-  },
-]
-
 ;(async () => {
   let oldTime = 0
 
@@ -44,8 +22,6 @@ const FIRE_EMITTERS = [
     return
   }
 
-  const opaqueRoot = new SceneObject()
-  const transparentRoot = new SceneObject()
   const shadowRoot = new SceneObject()
 
   const perspCamera = new PerspectiveCamera(
@@ -54,16 +30,24 @@ const FIRE_EMITTERS = [
     0.1,
     40,
   )
-    .setPosition({ x: 0, y: 5, z: -13 })
+    .setPosition({ x: 0, y: 5, z: -4 })
     .lookAt({ x: 0, y: 1, z: 0 })
 
   const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -100, 100)
-    .setPosition({ x: -40.1, y: 50, z: 0 })
-    .lookAt({ x: 0, y: 0, z: 0 })
-	
-	const screenOrthoCamera = new OrthographicCamera(-innerWidth / 2, innerWidth / 2, innerHeight / 2, -innerHeight / 2, 0, 2)
-		.setPosition({ x: 0, y: 0, z: 1 })
-		.lookAt({ x: 0, y: 0, z: 0 })
+    .setPosition({ x: -4.1, y: 40, z: 0 })
+    .lookAt([0, 0, 0])
+
+  const screenOrthoCamera = new OrthographicCamera(
+    -innerWidth / 2,
+    innerWidth / 2,
+    innerHeight / 2,
+    -innerHeight / 2,
+    0,
+    2,
+  )
+    .setPosition({ x: 0, y: 0, z: 1 })
+    .lookAt([0, 0, 0])
+    .updateViewMatrix()
 
   new CameraController(perspCamera, document.body, true, 0.1).lookAt([0, 1, 0])
 
@@ -71,7 +55,7 @@ const FIRE_EMITTERS = [
   renderer.devicePixelRatio = devicePixelRatio
   renderer.outputSize = [innerWidth, innerHeight]
   document.body.appendChild(renderer.canvas)
-  
+
   await renderer.init()
 
   renderer.projectionUBO
@@ -93,56 +77,46 @@ const FIRE_EMITTERS = [
     .updateUniform('matrix', shadowCamera.viewMatrix as Float32Array)
     .updateUniform('position', new Float32Array(shadowCamera.position))
 
-	renderer.screenProjectionUBO
-		.updateUniform('matrix', screenOrthoCamera.projectionMatrix as Float32Array)
-	renderer.screenViewUBO
-		.updateUniform('matrix', screenOrthoCamera.viewMatrix as Float32Array)
-	// console.log(screenOrthoCamera.projectionMatrix, screenOrthoCamera.viewMatrix)
+  renderer.screenProjectionUBO.updateUniform(
+    'matrix',
+    screenOrthoCamera.projectionMatrix as Float32Array,
+  )
+  renderer.screenViewUBO.updateUniform(
+    'matrix',
+    screenOrthoCamera.viewMatrix as Float32Array,
+  )
 
   const volume: VolumeSettings = {
-    xMin: -1.75,
-    yMin: -1.75,
-    zMin: -1.75,
-    width: 75,
-    height: 75,
+    xMin: -3,
+    yMin: -3,
+    zMin: -3,
+
+    width: 100,
+    height: 100,
     depth: 75,
-    xStep: 0.05,
-    yStep: 0.05,
-    zStep: 0.05,
-    isoLevel: 80,
+
+    xStep: 0.1,
+    yStep: 0.1,
+    zStep: 0.1,
+
+    isoLevel: 200,
   }
 
   const metaballs = new MetaballRenderer(renderer, volume)
   metaballs.setPosition({ y: 2 })
   const gridHelper = new HelperGrid(renderer)
-  const gltfModel = new GLTFModel(renderer)
-
-
-  opaqueRoot.addChild(gltfModel.opaqueRoot)
-  transparentRoot.addChild(gltfModel.transparentRoot)
-  shadowRoot.addChild(gltfModel.shadowRoot)
-  
-  const fireEmitters: FireEmitter[] = []
-  for (let i = 0; i < FIRE_EMITTERS.length; i++) {
-    const fireEmitter = new FireEmitter(renderer)
-		fireEmitter.name = 'fire-emitter-' + i
-    const { pos, scale } = FIRE_EMITTERS[i]
-    fireEmitter.setPosition(pos).setScale(scale).updateWorldMatrix()
-    // transparentRoot.addChild(fireEmitter)
-    fireEmitters.push(fireEmitter)
-  }
+  // const gltfModel = new GLTFModel(renderer)
 
   // debug shadow map
   const debugShadowMesh = new ShadowMapDebugger(renderer)
-		.setPosition({
-			x: innerWidth / 2 - ShadowMapDebugger.OUTPUT_SIZE / 2,
-			y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2
-		})
-		.updateWorldMatrix()
+    .setPosition({
+      x: innerWidth / 2 - ShadowMapDebugger.OUTPUT_SIZE / 2,
+      y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2,
+    })
+    .updateWorldMatrix()
 
-	// GBuffer
-	const deferredPass = new DeferredPass(renderer)
-  
+  // GBuffer
+  const deferredPass = new DeferredPass(renderer)
 
   requestAnimationFrame(renderFrame)
 
@@ -153,7 +127,7 @@ const FIRE_EMITTERS = [
 
     requestAnimationFrame(renderFrame)
 
-		// shadowCamera.setPosition({z: time}).updateViewMatrix()
+    // shadowCamera.setPosition({z: time}).updateViewMatrix()
 
     renderer.viewUBO
       .updateUniform('matrix', perspCamera.viewMatrix as Float32Array)
@@ -172,50 +146,25 @@ const FIRE_EMITTERS = [
     metaballs.updateSim(computePass, time, dt)
     computePass.end()
 
-    // const shadowRenderPass = commandEncoder.beginRenderPass({
-    //   label: 'shadow map framebuffer',
-    //   colorAttachments: [],
-    //   depthStencilAttachment: {
-    //     view: renderer.shadowDepthTexture.get().createView(),
-    //     // depthLoadOp: 'load',
-    //     // depthClearValue: 1,
-    //     // depthStoreOp: 'discard',
-
-    //     depthLoadOp: 'clear',
-    //     depthStoreOp: 'store',
-    //     // stencilLoadValue: 0,
-    //     // stencilStoreOp: 'store',
-    //   },
-    // })
-
-    // shadowRoot.traverse((node) => {
-    //   if (!(node instanceof Mesh)) {
-    //     return
-    //   }
-    //   node.render(shadowRenderPass)
-    // })
-
-    // shadowRenderPass.end()
-
-		const gBufferPass = commandEncoder.beginRenderPass({
-			...deferredPass.framebufferDescriptor,
-			label: 'gbuffer'
-		})
-		metaballs.render(gBufferPass)
-
-    opaqueRoot.traverse((node) => {
-      if (!(node instanceof Mesh)) {
-        return
-      }
-      node.render(gBufferPass)
+    const shadowRenderPass = commandEncoder.beginRenderPass({
+      label: 'shadow map framebuffer',
+      colorAttachments: [],
+      depthStencilAttachment: {
+        view: renderer.shadowDepthTexture.get().createView(),
+        depthLoadOp: 'clear',
+        depthStoreOp: 'store',
+      },
     })
-    transparentRoot.traverse((node) => {
-      if (!(node instanceof Mesh)) {
-        return
-      }
-      node.render(gBufferPass)
+
+    shadowRenderPass.end()
+
+    const gBufferPass = commandEncoder.beginRenderPass({
+      ...deferredPass.framebufferDescriptor,
+      label: 'gbuffer',
     })
-		gBufferPass.end()
+    metaballs.render(gBufferPass)
+
+    gBufferPass.end()
 
     const renderPass = commandEncoder.beginRenderPass({
       label: 'draw default framebuffer',
@@ -223,12 +172,9 @@ const FIRE_EMITTERS = [
       depthStencilAttachment: renderer.depthAndStencilAttachment,
     })
 
-		deferredPass.render(renderPass)
-    // debugShadowMesh.render(renderPass)
+    deferredPass.render(renderPass)
+    debugShadowMesh.render(renderPass)
     // gridHelper.render(renderPass)
-
-    
-
 
     renderPass.end()
 

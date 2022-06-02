@@ -166,10 +166,9 @@ export const MarchingCubesComputeSource = `
     cubeVerts = cubeVerts + 1u;
   }
 
-  // Main marching cubes algorithm
   @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
-    // Cache the values we're going to be referencing frequently.
+    
     let i0 = global_id;
     let i1 = global_id + vec3<u32>(1u, 0u, 0u);
     let i2 = global_id + vec3<u32>(1u, 1u, 0u);
@@ -306,7 +305,7 @@ export const METABALLS_FRAGMENT_SHADER = `
       var output: Output;
 			output.position = vec4(input.worldPosition.xyz, 0.0);
 			output.normal = vec4(normal, 0.0);
-			output.albedo = vec4(1.0, 0.0, 0.0, 1.0);
+			output.albedo = vec4(1.0, 1.0, 0.0, 1.0);
 			return output;
     }
 `

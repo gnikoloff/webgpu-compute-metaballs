@@ -10,7 +10,6 @@ import {
   DEPTH_FORMAT,
   MAX_METABALLS,
   METABALLS_COMPUTE_WORKGROUP_SIZE,
-  SAMPLE_COUNT,
 } from './constants'
 
 // import getClockPositions from './get-clock-positions'
@@ -122,7 +121,6 @@ export default class MetaballRenderer extends SceneObject {
 
     const marchingCubeCells =
       (volume.width - 1) * (volume.height - 1) * (volume.depth - 1)
-    console.log(marchingCubeCells)
     const vertexBufferSize =
       Float32Array.BYTES_PER_ELEMENT * 3 * 12 * marchingCubeCells
     const indexBufferSize =
@@ -159,13 +157,13 @@ export default class MetaballRenderer extends SceneObject {
     })
 
     this.ballPositions = new Array(MAX_METABALLS).fill(null).map((_, i) => ({
-      x: (Math.random() * 2 - 1) * 0.1,
-      y: (Math.random() * 2 - 1) * 0.1,
-      z: (Math.random() * 2 - 1) * 0.1,
+      x: (Math.random() * 2 - 1) * volume.xMin,
+      y: (Math.random() * 2 - 1) * volume.yMin,
+      z: (Math.random() * 2 - 1) * volume.zMin,
       vx: (Math.random() * 2 - 1) * 1,
       vy: (Math.random() * 2 - 1) * 1,
       vz: (Math.random() * 2 - 1) * 1,
-      speed: 0.001,
+      speed: Math.random() * 2 + 0.3,
     }))
 
     this.modelUBO = new UniformBuffer(this.renderer.device, {
@@ -192,6 +190,7 @@ export default class MetaballRenderer extends SceneObject {
   async init() {
     this.computeMetaballsPipeline =
       await this.renderer.device.createComputePipelineAsync({
+        layout: 'auto',
         compute: {
           module: this.renderer.device.createShaderModule({
             code: MetaballFieldComputeSource,
@@ -221,6 +220,7 @@ export default class MetaballRenderer extends SceneObject {
 
     this.computeMarchingCubesPipeline =
       await this.renderer.device.createComputePipelineAsync({
+        layout: 'auto',
         compute: {
           module: this.renderer.device.createShaderModule({
             label: 'marching cubes computer shader',
@@ -316,18 +316,18 @@ export default class MetaballRenderer extends SceneObject {
           }),
           targets: [
             { format: 'rgba32float' },
-						// normal
-						{ format: 'rgba32float' },
-						// albedo
-						{
-							format: 'bgra8unorm',
-						},
+            // normal
+            { format: 'rgba32float' },
+            // albedo
+            {
+              format: 'bgra8unorm',
+            },
           ],
         },
         depthStencil: {
           format: DEPTH_FORMAT,
           depthWriteEnabled: true,
-          depthCompare: 'always',
+          depthCompare: 'less',
         },
         primitive: {
           topology: 'triangle-list',
@@ -344,43 +344,82 @@ export default class MetaballRenderer extends SceneObject {
     time: DOMHighResTimeStamp,
     timeDelta: number,
   ): this {
-    this.setRotation({ y: time }).updateWorldMatrix()
+    this
+      // .setRotation({ y: time })
+      .updateWorldMatrix()
     const numblobs = MAX_METABALLS
-    const subtract = 12
-    const strength = (5 / ((Math.sqrt(numblobs) - 1) / 4 + 1)) * 4
+    const subtract = 10
+    const strength = 10
 
     this.metaballArrayHeader[0] = MAX_METABALLS
 
-    const speed = timeDelta
+    const speed = timeDelta * 0.014
+
+    const checkCollision = (ballA, i: number) => {
+      for (
+        let ballB, dx, dy, dist, min_dist, j = i + 1;
+        j < MAX_METABALLS;
+        j++
+      ) {
+        ballB = this.ballPositions[j]
+        dx = ballB.x - ballA.x
+        dy = ballB.y - ballA.y
+        dist = Math.sqrt(dx * dx + dy * dy)
+        min_dist = 1
+
+        let spring = 0.01
+        if (dist < min_dist) {
+          var tx = ballA.x + (dx / dist) * min_dist,
+            ty = ballA.y + (dy / dist) * min_dist,
+            ax = (tx - ballB.x) * spring,
+            ay = (ty - ballB.y) * spring
+          ballA.vx -= ax
+          ballA.vy -= ay
+          ballB.vx += ax
+          ballB.vy += ay
+        }
+      }
+    }
 
     for (let i = 0; i < MAX_METABALLS; i++) {
       const pos = this.ballPositions[i]
+
+      pos.vx += -pos.x * pos.speed * 0.1
+      pos.vy += -pos.y * pos.speed * 0.1
+      pos.vz += -pos.z * pos.speed * 0.1
+
+      checkCollision(pos, i)
 
       pos.x += pos.vx * speed
       pos.y += pos.vy * speed
       pos.z += pos.vz * speed
 
-      if (pos.x > 1) {
-        pos.x = 1
+      const padding = 0.8
+      const width = Math.abs(this.volume.xMin) - padding
+      const height = Math.abs(this.volume.yMin) - padding
+      const depth = Math.abs(this.volume.zMin) - padding
+
+      if (pos.x > width) {
+        pos.x = width
         pos.vx *= -1
-      } else if (pos.x < -1) {
-        pos.x = -1
+      } else if (pos.x < -width) {
+        pos.x = -width
         pos.vx *= -1
       }
 
-      if (pos.y > 1.5) {
-        pos.y = 1.5
+      if (pos.y > height) {
+        pos.y = height
         pos.vy *= -1
-      } else if (pos.y < -1.5) {
-        pos.y = -1.5
+      } else if (pos.y < -height) {
+        pos.y = -height
         pos.vy *= -1
       }
 
-      if (pos.z > 1) {
-        pos.z = 1
+      if (pos.z > depth) {
+        pos.z = depth
         pos.vz *= -1
-      } else if (pos.z < -1) {
-        pos.z = -1
+      } else if (pos.z < -depth) {
+        pos.z = -depth
         pos.vz *= -1
       }
     }

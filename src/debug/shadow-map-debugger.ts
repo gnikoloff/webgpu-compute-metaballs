@@ -1,5 +1,11 @@
-import { SAMPLE_COUNT } from '../constants'
-import { Geometry, GeometryUtils, IndexBuffer, Mesh, UniformBuffer, VertexBuffer } from '../lib/hwoa-rang-gpu'
+import {
+  Geometry,
+  GeometryUtils,
+  IndexBuffer,
+  Mesh,
+  UniformBuffer,
+  VertexBuffer,
+} from '../lib/hwoa-rang-gpu'
 import { LinearizeDepthSnippet } from '../shaders/shared'
 import WebGPURenderer from '../webgpu-renderer'
 
@@ -24,13 +30,13 @@ const FRAGMENT_SHADER_SRC = `
 `
 
 export default class ShadowMapDebugger extends Mesh {
-	public static readonly OUTPUT_SIZE = 256
+  public static readonly OUTPUT_SIZE = 256
 
-	private modelUBO: UniformBuffer
-	
-	constructor(renderer: WebGPURenderer) {
-		const geometry = new Geometry()
-		const { vertexStride, interleavedArray, indicesArray } =
+  private modelUBO: UniformBuffer
+
+  constructor(renderer: WebGPURenderer) {
+    const geometry = new Geometry()
+    const { vertexStride, interleavedArray, indicesArray } =
       GeometryUtils.createInterleavedPlane({
         width: ShadowMapDebugger.OUTPUT_SIZE,
         height: ShadowMapDebugger.OUTPUT_SIZE,
@@ -55,57 +61,48 @@ export default class ShadowMapDebugger extends Mesh {
     const indexBuffer = new IndexBuffer(renderer.device, {
       typedArray: indicesArray,
     })
-    geometry
-			.addVertexBuffer(vertexBuffer)
-			.addIndexBuffer(indexBuffer)
+    geometry.addVertexBuffer(vertexBuffer).addIndexBuffer(indexBuffer)
 
-		const modelUBO = new UniformBuffer(renderer.device, {
-			name: 'Model',
-			uniforms: {
-				matrix: {
-					type: 'mat4x4<f32>',
-					value: null
-				}
-			},
-			debugLabel: 'shadow map debugger model ubo'
-		})
-		
-		super(renderer.device, {
-			geometry: geometry,
-			ubos: [
-				renderer.screenProjectionUBO,
-				renderer.screenViewUBO,
-				modelUBO,
-			],
-			samplers: [renderer.depthDebugSampler],
-			textures: [renderer.shadowDepthTexture],
-			vertexShaderSource: {
-				main: VERTEX_SHADER_SRC,
-			},
-			fragmentShaderSource: {
-				head: LinearizeDepthSnippet,
-				main: FRAGMENT_SHADER_SRC,
-			},
+    const modelUBO = new UniformBuffer(renderer.device, {
+      name: 'Model',
+      uniforms: {
+        matrix: {
+          type: 'mat4x4<f32>',
+          value: null,
+        },
+      },
+      debugLabel: 'shadow map debugger model ubo',
+    })
 
-			multisample: {
-				count: SAMPLE_COUNT,
-			},
-			targets: [
-				{
-					format: 'bgra8unorm',
-				},
-			],
-			// depthStencil: {
+    super(renderer.device, {
+      geometry: geometry,
+      ubos: [renderer.screenProjectionUBO, renderer.screenViewUBO, modelUBO],
+      samplers: [renderer.depthDebugSampler],
+      textures: [renderer.shadowDepthTexture],
+      vertexShaderSource: {
+        main: VERTEX_SHADER_SRC,
+      },
+      fragmentShaderSource: {
+        head: LinearizeDepthSnippet,
+        main: FRAGMENT_SHADER_SRC,
+      },
+
+      targets: [
+        {
+          format: 'bgra8unorm',
+        },
+      ],
+      // depthStencil: {
       //   format: 'depth24plus',
       //   depthWriteEnabled: true,
       //   depthCompare: 'greater',
       // },
-		})
-		this.modelUBO = modelUBO
-		// this.setPosition({ z: 0.5 }).updateWorldMatrix()
-	}
-	render(renderPass: GPURenderPassEncoder) {
-		super.render(renderPass)
-		this.modelUBO.updateUniform('matrix', this.modelMatrix as Float32Array)
-	}
+    })
+    this.modelUBO = modelUBO
+    // this.setPosition({ z: 0.5 }).updateWorldMatrix()
+  }
+  render(renderPass: GPURenderPassEncoder) {
+    super.render(renderPass)
+    this.modelUBO.updateUniform('matrix', this.modelMatrix as Float32Array)
+  }
 }

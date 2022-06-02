@@ -1,4 +1,4 @@
-import { SHADOW_MAP_SIZE } from "../constants"
+import { SHADOW_MAP_SIZE } from '../constants'
 
 export const deferredPassVertexShader = `
 	output.Position = screenprojectionuniforms.matrix *
@@ -6,7 +6,7 @@ export const deferredPassVertexShader = `
 										model.matrix *
 										vec4(input.position, 1.0);
 	
-	// output.uv = input.uv;
+	output.uv = input.uv;
 `
 
 export const deferredPassFragmentShader = `
@@ -17,10 +17,6 @@ export const deferredPassFragmentShader = `
     0
   );
 	let worldPosition = positionMetallic.xyz;
-
-  if (worldPosition.z > 10000.0) {
-    discard;
-  }
 
   let normalRoughness = textureLoad(
     normal_texture,
@@ -68,7 +64,7 @@ export const deferredPassFragmentShader = `
 	surface.F0 = mix(vec3(0.04), albedo.rgb, vec3(surface.metallic));
 	surface.V = normalize(viewuniforms.position - worldPosition);
 
-	let pointLightPos = vec3(2.6, 2.5, -7.45);
+	let pointLightPos = vec3(2.6, 2.5, 0.0);
 
 	var pointLight: PointLight;
 	pointLight.pointToLight = pointLightPos - worldPosition;
@@ -77,21 +73,21 @@ export const deferredPassFragmentShader = `
 	pointLight.intensity = 3.0;
 
 	var pointLight2: PointLight;
-	pointLight2.pointToLight = vec3(-2.8, 2.5, -7.45) - worldPosition;
+	pointLight2.pointToLight = vec3(-2.8, 2.5, -0.0) - worldPosition;
 	pointLight2.color = vec3(1.0, 0.0, 0.0);
-	pointLight2.range = 2.0;
+	pointLight2.range = 20.0;
 	pointLight2.intensity = 3.0;
 
 	var pointLight3: PointLight;
-	pointLight3.pointToLight = vec3(2.6, 2.5, 9.4) - worldPosition;
+	pointLight3.pointToLight = vec3(2.6, 2.5, 0.0) - worldPosition;
 	pointLight3.color = vec3(1.0, 0.0, 0.0);
-	pointLight3.range = 2.0;
+	pointLight3.range = 20.0;
 	pointLight3.intensity = 3.0;
 
 	var pointLight4: PointLight;
-	pointLight4.pointToLight = vec3(-2.8, 2.5, 9.4) - worldPosition;
+	pointLight4.pointToLight = vec3(-2.8, 2.5, 0.0) - worldPosition;
 	pointLight4.color = vec3(1.0, 0.0, 0.0);
-	pointLight4.range = 2.0;
+	pointLight4.range = 20.0;
 	pointLight4.intensity = 3.0;
 
 	var pointLight5: PointLight;
@@ -113,11 +109,11 @@ export const deferredPassFragmentShader = `
 	Lo = Lo + PointLightRadiance(pointLight5, surface);
 	Lo = Lo + DirectionalLightRadiance(dirLight, surface);
 
-	let ambient = vec3(0.01) * surface.albedo.rgb;
+	let ambient = vec3(0.01) * albedo.rgb;
 
 	// let color = (ambient + Lo);
 	let color = linearTosRGB(ambient + Lo);
 		
 	// output.Color = vec4(1.0, 0.0, 0.0, 1.0);
-	output.Color = vec4(color, albedo.a);
+	output.Color = vec4(color.rgb, albedo.a);
 `

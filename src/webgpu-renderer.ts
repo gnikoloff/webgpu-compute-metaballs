@@ -1,9 +1,4 @@
-import {
-  BACKGROUND_COLOR,
-  DEPTH_FORMAT,
-  SAMPLE_COUNT,
-  SHADOW_MAP_SIZE,
-} from './constants'
+import { BACKGROUND_COLOR, DEPTH_FORMAT, SHADOW_MAP_SIZE } from './constants'
 import {
   BindGroup,
   Sampler,
@@ -25,15 +20,15 @@ export default class WebGPURenderer {
   device!: GPUDevice
   colorAttachment!: GPURenderPassColorAttachment
   depthAndStencilAttachment!: GPURenderPassDepthStencilAttachment
-	
-	depthTexture: Texture
+
+  depthTexture: Texture
   shadowDepthTexture: Texture
-	gbufferDepthTexture: Texture
+  gbufferDepthTexture: Texture
 
   projectionUBO!: UniformBuffer
   viewUBO!: UniformBuffer
-	screenProjectionUBO!: UniformBuffer
-	screenViewUBO: UniformBuffer
+  screenProjectionUBO!: UniformBuffer
+  screenViewUBO: UniformBuffer
   shadowProjectionUBO!: UniformBuffer
   shadowViewUBO!: UniformBuffer
 
@@ -42,7 +37,7 @@ export default class WebGPURenderer {
   depthDebugSampler: Sampler
 
   get presentationFormat() {
-    return this.context.getPreferredFormat(this.adapter)
+    return navigator.gpu.getPreferredCanvasFormat()
   }
 
   set outputSize(size: [number, number]) {
@@ -132,43 +127,31 @@ export default class WebGPURenderer {
       name: 'ShadowViewUniforms',
       uniforms: viewUBOUniformDefinition,
     })
-		this.screenProjectionUBO = new UniformBuffer(this.device, {
-			name: 'ScreenProjectionUniforms',
-			uniforms: {
-				matrix: {
-					type: 'mat4x4<f32>',
-				},
-			}
-		})
-		this.screenViewUBO = new UniformBuffer(this.device, {
-			name: 'ScreenViewUniforms',
-			uniforms: {
-				matrix: {
-					type: 'mat4x4<f32>',
-				},
-			}
-		})
+    this.screenProjectionUBO = new UniformBuffer(this.device, {
+      name: 'ScreenProjectionUniforms',
+      uniforms: {
+        matrix: {
+          type: 'mat4x4<f32>',
+        },
+      },
+    })
+    this.screenViewUBO = new UniformBuffer(this.device, {
+      name: 'ScreenViewUniforms',
+      uniforms: {
+        matrix: {
+          type: 'mat4x4<f32>',
+        },
+      },
+    })
 
-    const presentationFormat = this.context.getPreferredFormat(this.adapter)
+    const presentationFormat = this.presentationFormat
     this.context.configure({
       device: this.device,
       format: presentationFormat,
     })
 
-    const msaaColorTexture = new Texture(
-      this.device,
-      'msaaTexture',
-      'float',
-      '2d',
-    ).fromDefinition({
-      size: { width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio },
-      sampleCount: SAMPLE_COUNT,
-      format: presentationFormat,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    })
-
     this.colorAttachment = {
-      view: msaaColorTexture.get().createView(),
+      view: null,
       resolveTarget: undefined,
       clearValue: {
         r: BACKGROUND_COLOR[0],
@@ -187,17 +170,22 @@ export default class WebGPURenderer {
       '2d',
       'texture_depth_2d',
     ).fromDefinition({
-      size: { width: this.outputSize[0] * devicePixelRatio, height: this.outputSize[1] * devicePixelRatio },
-      sampleCount: SAMPLE_COUNT,
+      size: {
+        width: this.outputSize[0] * devicePixelRatio,
+        height: this.outputSize[1] * devicePixelRatio,
+      },
       format: DEPTH_FORMAT,
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     })
 
-		this.gbufferDepthTexture = new Texture(this.device, 'gBufferDepth').fromDefinition({
-			size: [...this.outputSize, 1],
-			format: 'depth24plus',
-			usage: GPUTextureUsage.RENDER_ATTACHMENT,
-		})
+    this.gbufferDepthTexture = new Texture(
+      this.device,
+      'gBufferDepth',
+    ).fromDefinition({
+      size: [...this.outputSize, 1],
+      format: 'depth24plus',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    })
 
     // const depthTexture = this.device.createTexture({
     //   size: { width: this.outputSize[0], height: this.outputSize[1] },
@@ -230,9 +218,9 @@ export default class WebGPURenderer {
       'depthSampler',
       'comparison',
       'sampler_comparison',
-			{
-				compare: 'less',
-			}
+      {
+        compare: 'less',
+      },
     )
 
     this.bindGroups.frame = new BindGroup(this.device, 0)
@@ -245,15 +233,13 @@ export default class WebGPURenderer {
     this.bindGroups.shadow.addUBO(this.shadowViewUBO)
     this.bindGroups.shadow.init()
 
-		this.bindGroups.screenOrthoFrame = new BindGroup(this.device, 0)
-		this.bindGroups.screenOrthoFrame.addUBO(this.screenProjectionUBO)
-		this.bindGroups.screenOrthoFrame.addUBO(this.screenViewUBO)
-		this.bindGroups.screenOrthoFrame.init()
+    this.bindGroups.screenOrthoFrame = new BindGroup(this.device, 0)
+    this.bindGroups.screenOrthoFrame.addUBO(this.screenProjectionUBO)
+    this.bindGroups.screenOrthoFrame.addUBO(this.screenViewUBO)
+    this.bindGroups.screenOrthoFrame.init()
   }
 
   onRender() {
-    this.colorAttachment.resolveTarget = this.context
-      .getCurrentTexture()
-      .createView()
+    this.colorAttachment.view = this.context.getCurrentTexture().createView()
   }
 }
