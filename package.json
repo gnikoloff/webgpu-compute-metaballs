@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@loaders.gl/core": "^3.1.8",
-    "@loaders.gl/gltf": "^3.1.8"
+    "@loaders.gl/gltf": "^3.1.8",
+    "gl-matrix": "^3.4.3"
   }
 }

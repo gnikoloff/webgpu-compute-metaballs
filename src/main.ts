@@ -1,17 +1,13 @@
-import HelperGrid from './debug/helper-grid'
-import { VolumeSettings } from './interfaces'
-import {
-  PerspectiveCamera,
-  CameraController,
-  SceneObject,
-  Mesh,
-  OrthographicCamera,
-} from './lib/hwoa-rang-gpu'
+import { IVolumeSettings } from './protocol'
 import MetaballRenderer from './metaball-renderer'
 
 import WebGPURenderer from './webgpu-renderer'
-import ShadowMapDebugger from './debug/shadow-map-debugger'
-import DeferredPass from './postfx/deferred-pass'
+
+import { PerspectiveCamera } from './lib/camera/perspective-camera'
+import { OrthographicCamera } from './lib/camera/orthographic-camera'
+import { CameraController } from './lib/camera/camera-controller'
+import { Effect } from './postfx/effect'
+import { DeferredPass } from './postfx/deferred-pass'
 ;(async () => {
   let oldTime = 0
 
@@ -22,8 +18,6 @@ import DeferredPass from './postfx/deferred-pass'
     return
   }
 
-  const shadowRoot = new SceneObject()
-
   const perspCamera = new PerspectiveCamera(
     (45 * Math.PI) / 180,
     innerWidth / innerHeight,
@@ -33,23 +27,20 @@ import DeferredPass from './postfx/deferred-pass'
     .setPosition({ x: 0, y: 5, z: -4 })
     .lookAt({ x: 0, y: 1, z: 0 })
 
-  const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -100, 100)
-    .setPosition({ x: -4.1, y: 40, z: 0 })
-    .lookAt([0, 0, 0])
+  // const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -100, 100)
+  //   .setPosition({ x: -4.1, y: 40, z: 0 })
+  //   .lookAt({ x: 0, y: 0, z: 0 })
 
-  const screenOrthoCamera = new OrthographicCamera(
-    -innerWidth / 2,
-    innerWidth / 2,
-    innerHeight / 2,
-    -innerHeight / 2,
-    0,
-    2,
-  )
-    .setPosition({ x: 0, y: 0, z: 1 })
-    .lookAt([0, 0, 0])
-    .updateViewMatrix()
+  // const screenOrthoCamera = new OrthographicCamera(-2, 2, 2, -2, 0, 2)
+  //   .setPosition({ x: 0, y: 0, z: 1 })
+  //   .lookAt({ x: 0, y: 0, z: 0 })
+  //   .updateViewMatrix()
+
+  // console.log(screenOrthoCamera)
 
   new CameraController(perspCamera, document.body, true, 0.1).lookAt([0, 1, 0])
+
+  console.log(perspCamera)
 
   const renderer = new WebGPURenderer(adapter)
   renderer.devicePixelRatio = devicePixelRatio
@@ -58,35 +49,58 @@ import DeferredPass from './postfx/deferred-pass'
 
   await renderer.init()
 
-  renderer.projectionUBO
-    .updateUniform('matrix', perspCamera.projectionMatrix as Float32Array)
-    .updateUniform('outputSize', new Float32Array([innerWidth, innerHeight]))
-    .updateUniform('zNear', new Float32Array([perspCamera.near]))
-    .updateUniform('zFar', new Float32Array([perspCamera.far]))
-
-  renderer.shadowProjectionUBO
-    .updateUniform('matrix', shadowCamera.projectionMatrix as Float32Array)
-    .updateUniform('outputSize', new Float32Array([innerWidth, innerHeight]))
-    .updateUniform('zNear', new Float32Array([shadowCamera.near]))
-    .updateUniform('zFar', new Float32Array([shadowCamera.far]))
-
-  renderer.viewUBO
-    .updateUniform('matrix', perspCamera.viewMatrix as Float32Array)
-    .updateUniform('position', new Float32Array(perspCamera.position))
-  renderer.shadowViewUBO
-    .updateUniform('matrix', shadowCamera.viewMatrix as Float32Array)
-    .updateUniform('position', new Float32Array(shadowCamera.position))
-
-  renderer.screenProjectionUBO.updateUniform(
-    'matrix',
-    screenOrthoCamera.projectionMatrix as Float32Array,
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.projectionUBO,
+    0,
+    perspCamera.projectionMatrix as Float32Array,
   )
-  renderer.screenViewUBO.updateUniform(
-    'matrix',
-    screenOrthoCamera.viewMatrix as Float32Array,
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.projectionUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT,
+    new Float32Array([innerWidth, innerHeight]),
+  )
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.projectionUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT + 8 * Float32Array.BYTES_PER_ELEMENT,
+    new Float32Array([perspCamera.near]),
+  )
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.projectionUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT +
+      8 * Float32Array.BYTES_PER_ELEMENT +
+      1 * Float32Array.BYTES_PER_ELEMENT,
+    new Float32Array([perspCamera.far]),
   )
 
-  const volume: VolumeSettings = {
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.viewUBO,
+    0 * Float32Array.BYTES_PER_ELEMENT,
+    perspCamera.viewMatrix as Float32Array,
+  )
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.viewUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT,
+    new Float32Array(perspCamera.position),
+  )
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.viewUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT + 4 * Float32Array.BYTES_PER_ELEMENT,
+    new Float32Array([0]),
+  )
+
+  // renderer.device.queue.writeBuffer(
+  //   renderer.ubos.screenProjectionUBO,
+  //   0 * Float32Array.BYTES_PER_ELEMENT,
+  //   screenOrthoCamera.projectionMatrix as Float32Array,
+  // )
+
+  // renderer.device.queue.writeBuffer(
+  //   renderer.ubos.screenViewUBO,
+  //   0 * Float32Array.BYTES_PER_ELEMENT,
+  //   screenOrthoCamera.viewMatrix as Float32Array,
+  // )
+
+  const volume: IVolumeSettings = {
     xMin: -3,
     yMin: -3,
     zMin: -3,
@@ -103,19 +117,21 @@ import DeferredPass from './postfx/deferred-pass'
   }
 
   const metaballs = new MetaballRenderer(renderer, volume)
-  metaballs.setPosition({ y: 2 })
-  const gridHelper = new HelperGrid(renderer)
+
+  // const gridHelper = new HelperGrid(renderer)
   // const gltfModel = new GLTFModel(renderer)
 
   // debug shadow map
-  const debugShadowMesh = new ShadowMapDebugger(renderer)
-    .setPosition({
-      x: innerWidth / 2 - ShadowMapDebugger.OUTPUT_SIZE / 2,
-      y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2,
-    })
-    .updateWorldMatrix()
+  // const debugShadowMesh = new ShadowMapDebugger(renderer)
+  //   .setPosition({
+  //     x: innerWidth / 2 - ShadowMapDebugger.OUTPUT_SIZE / 2,
+  //     y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2,
+  //   })
+  //   .updateWorldMatrix()
 
   // GBuffer
+  // const deferredPass = new DeferredPass(renderer)
+
   const deferredPass = new DeferredPass(renderer)
 
   requestAnimationFrame(renderFrame)
@@ -127,17 +143,27 @@ import DeferredPass from './postfx/deferred-pass'
 
     requestAnimationFrame(renderFrame)
 
-    // shadowCamera.setPosition({z: time}).updateViewMatrix()
+    renderer.device.queue.writeBuffer(
+      renderer.ubos.viewUBO,
+      0 * Float32Array.BYTES_PER_ELEMENT,
+      perspCamera.viewMatrix as Float32Array,
+    )
+    renderer.device.queue.writeBuffer(
+      renderer.ubos.viewUBO,
+      16 * Float32Array.BYTES_PER_ELEMENT,
+      new Float32Array(perspCamera.position),
+    )
+    renderer.device.queue.writeBuffer(
+      renderer.ubos.viewUBO,
+      16 * Float32Array.BYTES_PER_ELEMENT + 4 * Float32Array.BYTES_PER_ELEMENT,
+      new Float32Array([0]),
+    )
 
-    renderer.viewUBO
-      .updateUniform('matrix', perspCamera.viewMatrix as Float32Array)
-      .updateUniform('time', new Float32Array([time]))
-      .updateUniform('position', new Float32Array(perspCamera.position))
-    renderer.shadowViewUBO
-      .updateUniform('matrix', shadowCamera.viewMatrix as Float32Array)
-      .updateUniform('time', new Float32Array([time]))
-      .updateUniform('position', new Float32Array(shadowCamera.position))
-
+    // renderer.device.queue.writeBuffer(
+    //   renderer.ubos.screenProjectionUBO,
+    //   0 * Float32Array.BYTES_PER_ELEMENT,
+    //   screenOrthoCamera.projectionMatrix as Float32Array,
+    // )
     renderer.onRender()
 
     const commandEncoder = renderer.device.createCommandEncoder()
@@ -146,17 +172,17 @@ import DeferredPass from './postfx/deferred-pass'
     metaballs.updateSim(computePass, time, dt)
     computePass.end()
 
-    const shadowRenderPass = commandEncoder.beginRenderPass({
-      label: 'shadow map framebuffer',
-      colorAttachments: [],
-      depthStencilAttachment: {
-        view: renderer.shadowDepthTexture.get().createView(),
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-      },
-    })
+    // const shadowRenderPass = commandEncoder.beginRenderPass({
+    //   label: 'shadow map framebuffer',
+    //   colorAttachments: [],
+    //   depthStencilAttachment: {
+    //     view: renderer.shadowDepthTexture.createView(),
+    //     depthLoadOp: 'clear',
+    //     depthStoreOp: 'store',
+    //   },
+    // })
 
-    shadowRenderPass.end()
+    // shadowRenderPass.end()
 
     const gBufferPass = commandEncoder.beginRenderPass({
       ...deferredPass.framebufferDescriptor,
@@ -169,12 +195,9 @@ import DeferredPass from './postfx/deferred-pass'
     const renderPass = commandEncoder.beginRenderPass({
       label: 'draw default framebuffer',
       colorAttachments: [renderer.colorAttachment],
-      depthStencilAttachment: renderer.depthAndStencilAttachment,
     })
 
     deferredPass.render(renderPass)
-    debugShadowMesh.render(renderPass)
-    // gridHelper.render(renderPass)
 
     renderPass.end()
 

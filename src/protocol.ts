@@ -1,4 +1,4 @@
-export interface VolumeSettings {
+export interface IVolumeSettings {
   xMin: number
   yMin: number
   zMin: number
@@ -11,7 +11,7 @@ export interface VolumeSettings {
   isoLevel: number
 }
 
-export interface MetaballPos {
+export interface IMetaballPos {
   x: number
   y: number
   z: number
@@ -19,4 +19,10 @@ export interface MetaballPos {
   vy: number
   vz: number
   speed: number
+}
+
+export interface IScreenEffect {
+  fragmentShader: string
+  bindGroupLayouts?: GPUBindGroupLayout[]
+  bindGroups?: GPUBindGroup[]
 }

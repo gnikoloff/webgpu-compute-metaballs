@@ -1,104 +1,116 @@
-import {
-  Geometry,
-  GeometryUtils,
-  IndexBuffer,
-  Mesh,
-  Sampler,
-  ShaderDefinition,
-  Texture,
-  UniformBuffer,
-  VertexBuffer,
-} from '../lib/hwoa-rang-gpu'
+import { IScreenEffect } from '../protocol'
+import { EffectVertexShader } from '../shaders/shared'
 import WebGPURenderer from '../webgpu-renderer'
 
-interface IEffect {
-  vertexShaderSource: ShaderDefinition
-  fragmentShaderSource: ShaderDefinition
-  textures?: Texture[]
-  samplers?: Sampler[]
-  ubos?: UniformBuffer[]
-}
+export class Effect {
+  protected renderer: WebGPURenderer
+  protected renderPipeline: GPURenderPipeline
 
-export default class Effect extends Mesh {
-  private modelUBO: UniformBuffer
-  public framebufferDescriptor: GPURenderPassDescriptor
-  protected passEncoder: GPURenderPassEncoder
+  private bindGroups: GPUBindGroup[] = []
+
+  private vertexBuffer: GPUBuffer
+  private indexBuffer: GPUBuffer
 
   constructor(
     renderer: WebGPURenderer,
-    {
-      vertexShaderSource,
-      fragmentShaderSource,
-      textures = [],
-      samplers = [],
-      ubos = [],
-    }: IEffect,
+    { fragmentShader, bindGroupLayouts = [], bindGroups = [] }: IScreenEffect,
   ) {
-    const geometry = new Geometry()
-    const { vertexStride, interleavedArray, indicesArray } =
-      GeometryUtils.createInterleavedPlane({
-        width: innerWidth,
-        height: innerHeight,
-      })
-    const vertexBuffer = new VertexBuffer(renderer.device, {
-      bindPointIdx: 0,
-      typedArray: interleavedArray,
-      stride: vertexStride * Float32Array.BYTES_PER_ELEMENT,
-    })
-      .addAttribute(
-        'position',
-        0 * Float32Array.BYTES_PER_ELEMENT,
-        3 * Float32Array.BYTES_PER_ELEMENT,
-        'float32x3',
-      )
-      .addAttribute(
-        'uv',
-        3 * Float32Array.BYTES_PER_ELEMENT,
-        2 * Float32Array.BYTES_PER_ELEMENT,
-        'float32x2',
-      )
-    const indexBuffer = new IndexBuffer(renderer.device, {
-      typedArray: indicesArray,
-    })
-    geometry.addVertexBuffer(vertexBuffer).addIndexBuffer(indexBuffer)
-    const modelUBO = new UniformBuffer(renderer.device, {
-      name: 'Model',
-      uniforms: {
-        matrix: {
-          type: 'mat4x4<f32>',
-          value: null,
-        },
-      },
-      debugLabel: 'effect model ubo',
-    })
-    super(renderer.device, {
-      geometry: geometry,
-      ubos: [
-        ...ubos,
-        renderer.screenProjectionUBO,
-        renderer.screenViewUBO,
-        modelUBO,
-      ],
-      samplers,
-      textures,
-      vertexShaderSource,
-      fragmentShaderSource,
-      // depthStencil: {
-      //   format: 'depth24plus',
-      //   depthWriteEnabled: true,
-      //   depthCompare: 'greater',
-      // },
-      targets: [
-        {
-          format: 'bgra8unorm',
-        },
-      ],
-    })
-    this.modelUBO = modelUBO
-  }
-  render(renderPass: GPURenderPassEncoder) {
-    super.render(renderPass)
+    this.renderer = renderer
+    this.bindGroups = bindGroups
 
-    this.modelUBO.updateUniform('matrix', this.modelMatrix as Float32Array)
+    // prettier-ignore
+    const interleavedData = new Float32Array([
+			// pos            // uv
+			-1,  1,  0.0, 1.0,
+			-1, -1,  0.0, 0.0,
+			 1, -1,  1.0, 1.0,
+			 1,  1,  1.0, 0.0,
+		])
+    // prettier-ignore
+    const indices = new Uint16Array([
+			3, 2, 1,
+			3, 1, 0
+    ])
+    this.vertexBuffer = renderer.device.createBuffer({
+      size: interleavedData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      label: 'fullscreen effect vertex buffer',
+      mappedAtCreation: true,
+    })
+    new Float32Array(this.vertexBuffer.getMappedRange()).set(interleavedData)
+    this.vertexBuffer.unmap()
+
+    this.indexBuffer = renderer.device.createBuffer({
+      size: indices.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+      label: 'fullscreen effect index buffer',
+      mappedAtCreation: true,
+    })
+    new Uint16Array(this.indexBuffer.getMappedRange()).set(indices)
+    this.indexBuffer.unmap()
+
+    this.init(fragmentShader, bindGroupLayouts)
+  }
+  async init(fragmentShader: string, bindGroupLayouts: GPUBindGroupLayout[]) {
+    this.renderPipeline = await this.renderer.device.createRenderPipeline({
+      label: 'fullscreen effect render pipeline',
+      layout: this.renderer.device.createPipelineLayout({
+        label: 'fullscreen effect render pipeline layout',
+        bindGroupLayouts: [...bindGroupLayouts],
+      }),
+      primitive: {
+        topology: 'triangle-strip',
+        stripIndexFormat: 'uint16',
+      },
+      vertex: {
+        entryPoint: 'main',
+        buffers: [
+          {
+            arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              {
+                shaderLocation: 0,
+                format: 'float32x2',
+                offset: 0 * Float32Array.BYTES_PER_ELEMENT,
+              },
+              {
+                shaderLocation: 1,
+                format: 'float32x2',
+                offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+              },
+            ],
+          },
+        ],
+        module: this.renderer.device.createShaderModule({
+          code: EffectVertexShader,
+        }),
+      },
+      fragment: {
+        entryPoint: 'main',
+        module: this.renderer.device.createShaderModule({
+          code: fragmentShader,
+        }),
+        targets: [{ format: 'bgra8unorm' }],
+      },
+    })
+  }
+
+  protected preRender(renderPass: GPURenderPassEncoder): void {
+    if (!this.renderPipeline) {
+      return
+    }
+    renderPass.setPipeline(this.renderPipeline)
+    for (let i = 0; i < this.bindGroups.length; i++) {
+      renderPass.setBindGroup(i, this.bindGroups[i])
+    }
+    renderPass.setVertexBuffer(0, this.vertexBuffer)
+    renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
+  }
+
+  protected postRender(renderPass: GPURenderPassEncoder): void {
+    if (!this.renderPipeline) {
+      return
+    }
+    renderPass.drawIndexed(6)
   }
 }

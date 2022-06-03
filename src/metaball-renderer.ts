@@ -1,10 +1,4 @@
-import {
-  BindGroup,
-  SceneObject,
-  UniformBuffer,
-  WorkgroupSize,
-} from './lib/hwoa-rang-gpu'
-import { MetaballPos, VolumeSettings } from './interfaces'
+import { IMetaballPos, IVolumeSettings } from './protocol'
 
 import {
   DEPTH_FORMAT,
@@ -28,9 +22,9 @@ import {
 
 import WebGPURenderer from './webgpu-renderer'
 
-export default class MetaballRenderer extends SceneObject {
+export default class MetaballRenderer {
   renderer: WebGPURenderer
-  volume: VolumeSettings
+  volume: IVolumeSettings
 
   tablesBuffer: GPUBuffer
   metaballBuffer: GPUBuffer
@@ -46,8 +40,6 @@ export default class MetaballRenderer extends SceneObject {
 
   computeMetaballsBindGroup!: GPUBindGroup
   computeMarchingCubesBindGroup!: GPUBindGroup
-  modelUBO: UniformBuffer
-  modelBindGroup: BindGroup
 
   indirectRenderArray: Uint32Array
   metaballArray: ArrayBuffer
@@ -57,10 +49,9 @@ export default class MetaballRenderer extends SceneObject {
   numBlob = MAX_METABALLS
   indexCount: number
 
-  ballPositions: MetaballPos[] = []
+  ballPositions: IMetaballPos[] = []
 
-  constructor(renderer: WebGPURenderer, volume: VolumeSettings) {
-    super()
+  constructor(renderer: WebGPURenderer, volume: IVolumeSettings) {
     this.renderer = renderer
     this.volume = volume
 
@@ -166,23 +157,8 @@ export default class MetaballRenderer extends SceneObject {
       speed: Math.random() * 2 + 0.3,
     }))
 
-    this.modelUBO = new UniformBuffer(this.renderer.device, {
-      name: 'Model',
-      uniforms: {
-        matrix: {
-          type: 'mat4x4<f32>',
-          value: this.worldMatrix as Float32Array,
-        },
-      },
-      debugLabel: 'spaceship model ubo',
-    })
-    this.modelBindGroup = new BindGroup(
-      this.renderer.device,
-      1,
-      'metaball model bind group',
-    )
-    this.modelBindGroup.addUBO(this.modelUBO)
-    this.modelBindGroup.init()
+    // this.modelBindGroup.addUBO(this.modelUBO)
+    // this.modelBindGroup.init()
 
     this.init()
   }
@@ -190,7 +166,6 @@ export default class MetaballRenderer extends SceneObject {
   async init() {
     this.computeMetaballsPipeline =
       await this.renderer.device.createComputePipelineAsync({
-        layout: 'auto',
         compute: {
           module: this.renderer.device.createShaderModule({
             code: MetaballFieldComputeSource,
@@ -276,10 +251,7 @@ export default class MetaballRenderer extends SceneObject {
         label: 'metaball rendering pipeline',
         layout: this.renderer.device.createPipelineLayout({
           label: 'metaball rendering pipeline layout',
-          bindGroupLayouts: [
-            this.renderer.bindGroups.frame.getLayout(),
-            this.modelBindGroup.getLayout(),
-          ],
+          bindGroupLayouts: [this.renderer.bindGroupsLayouts.frame],
         }),
         vertex: {
           entryPoint: 'main',
@@ -344,9 +316,6 @@ export default class MetaballRenderer extends SceneObject {
     time: DOMHighResTimeStamp,
     timeDelta: number,
   ): this {
-    this
-      // .setRotation({ y: time })
-      .updateWorldMatrix()
     const numblobs = MAX_METABALLS
     const subtract = 10
     const strength = 10
@@ -446,7 +415,7 @@ export default class MetaballRenderer extends SceneObject {
       this.indirectRenderArray,
     )
 
-    const dispatchSize: WorkgroupSize = [
+    const dispatchSize: [number, number, number] = [
       this.volume.width / METABALLS_COMPUTE_WORKGROUP_SIZE[0],
       this.volume.height / METABALLS_COMPUTE_WORKGROUP_SIZE[1],
       this.volume.depth / METABALLS_COMPUTE_WORKGROUP_SIZE[2],
@@ -456,14 +425,14 @@ export default class MetaballRenderer extends SceneObject {
     if (this.computeMetaballsPipeline) {
       computePass.setPipeline(this.computeMetaballsPipeline)
       computePass.setBindGroup(0, this.computeMetaballsBindGroup)
-      computePass.dispatch(...dispatchSize)
+      computePass.dispatchWorkgroups(...dispatchSize)
     }
 
     // update marching cubes
     if (this.computeMarchingCubesPipeline) {
       computePass.setPipeline(this.computeMarchingCubesPipeline)
       computePass.setBindGroup(0, this.computeMarchingCubesBindGroup)
-      computePass.dispatch(...dispatchSize)
+      computePass.dispatchWorkgroups(...dispatchSize)
     }
     return this
   }
@@ -472,10 +441,8 @@ export default class MetaballRenderer extends SceneObject {
     if (!this.renderMetaballsPipeline) {
       return this
     }
-    this.modelUBO.updateUniform('matrix', this.worldMatrix as Float32Array)
     renderPass.setPipeline(this.renderMetaballsPipeline)
-    this.renderer.bindGroups.frame.bind(renderPass)
-    this.modelBindGroup.bind(renderPass)
+    renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setVertexBuffer(1, this.normalBuffer)
     renderPass.setIndexBuffer(this.indexBuffer, 'uint32')
