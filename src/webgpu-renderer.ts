@@ -1,6 +1,6 @@
 import { BACKGROUND_COLOR, DEPTH_FORMAT } from './constants'
 
-export default class WebGPURenderer {
+export class WebGPURenderer {
   adapter: GPUAdapter
 
   #outputSize: [number, number] = [512, 512]

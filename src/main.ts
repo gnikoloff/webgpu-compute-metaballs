@@ -1,13 +1,10 @@
 import { IVolumeSettings } from './protocol'
-import MetaballRenderer from './metaball-renderer'
-
-import WebGPURenderer from './webgpu-renderer'
-
+import { Metaballs } from './meshes/metaballs'
+import { WebGPURenderer } from './webgpu-renderer'
 import { PerspectiveCamera } from './lib/camera/perspective-camera'
-import { OrthographicCamera } from './lib/camera/orthographic-camera'
 import { CameraController } from './lib/camera/camera-controller'
-import { Effect } from './postfx/effect'
 import { DeferredPass } from './postfx/deferred-pass'
+import { BoxOutline } from './meshes/box-outline'
 ;(async () => {
   let oldTime = 0
 
@@ -24,8 +21,8 @@ import { DeferredPass } from './postfx/deferred-pass'
     0.1,
     40,
   )
-    .setPosition({ x: 0, y: 5, z: -4 })
-    .lookAt({ x: 0, y: 1, z: 0 })
+    .setPosition({ x: 10, y: 5, z: -12 })
+    .lookAt({ x: 0, y: 0, z: 0 })
 
   // const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -100, 100)
   //   .setPosition({ x: -4.1, y: 40, z: 0 })
@@ -88,18 +85,6 @@ import { DeferredPass } from './postfx/deferred-pass'
     new Float32Array([0]),
   )
 
-  // renderer.device.queue.writeBuffer(
-  //   renderer.ubos.screenProjectionUBO,
-  //   0 * Float32Array.BYTES_PER_ELEMENT,
-  //   screenOrthoCamera.projectionMatrix as Float32Array,
-  // )
-
-  // renderer.device.queue.writeBuffer(
-  //   renderer.ubos.screenViewUBO,
-  //   0 * Float32Array.BYTES_PER_ELEMENT,
-  //   screenOrthoCamera.viewMatrix as Float32Array,
-  // )
-
   const volume: IVolumeSettings = {
     xMin: -3,
     yMin: -3,
@@ -113,10 +98,11 @@ import { DeferredPass } from './postfx/deferred-pass'
     yStep: 0.1,
     zStep: 0.1,
 
-    isoLevel: 200,
+    isoLevel: 10,
   }
 
-  const metaballs = new MetaballRenderer(renderer, volume)
+  const metaballs = new Metaballs(renderer, volume)
+  const boxOutline = new BoxOutline(renderer)
 
   // const gridHelper = new HelperGrid(renderer)
   // const gltfModel = new GLTFModel(renderer)
@@ -189,6 +175,7 @@ import { DeferredPass } from './postfx/deferred-pass'
       label: 'gbuffer',
     })
     metaballs.render(gBufferPass)
+    boxOutline.render(gBufferPass)
 
     gBufferPass.end()
 

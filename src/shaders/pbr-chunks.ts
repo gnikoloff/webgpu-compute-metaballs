@@ -1,4 +1,4 @@
-export const GET_NORMAL_FROM_MAP_PBR_SHADER_FN = `
+export const GetNormalFromMap = `
   fn getNormalFromMap(uv: vec2<f32>, normal: vec3<f32>, worldPos: vec3<f32>) -> vec3<f32> {
     let tangentNormal = textureSample(normalTexture, mySampler, uv).xyz * 2.0 - 1.0;
 
@@ -15,7 +15,7 @@ export const GET_NORMAL_FROM_MAP_PBR_SHADER_FN = `
   }
 `
 
-export const DISTRIBUTION_GGX_PBR_SHADER_FN = `
+export const DistributionGGX = `
   fn DistributionGGX(N: vec3<f32>, H: vec3<f32>, roughness: f32) -> f32 {
     let a      = roughness*roughness;
     let a2     = a*a;
@@ -29,7 +29,7 @@ export const DISTRIBUTION_GGX_PBR_SHADER_FN = `
   }
 `
 
-export const GEOMETRY_SMITH_PBR_SHADER_FN = `
+export const GeometrySmith = `
   fn GeometrySchlickGGX(NdotV: f32, roughness: f32) -> f32 {
     let r = (roughness + 1.0);
     let k = (r*r) / 8.0;
@@ -50,19 +50,19 @@ export const GEOMETRY_SMITH_PBR_SHADER_FN = `
   }
 `
 
-export const FRESNEL_SCHLICK_PBR_SHADER_FN = `
+export const FresnelSchlick = `
   fn FresnelSchlick(cosTheta: f32, F0: vec3<f32>) -> vec3<f32> {
     return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
   } 
 `
 
-export const REINHARD_TONEMAPPING_PBR_SHADER_FN = `
+export const ReinhardTonemapping = `
   fn reinhard(x: vec3<f32>) -> vec3<f32> {
     return x / (1.0 + x);
   }
 `
 
-export const POINT_LIGHT_SHADER_STRUCT = `
+export const PointLightStruct = `
   struct PointLight {
     pointToLight: vec3<f32>,
     color: vec3<f32>,
@@ -71,26 +71,27 @@ export const POINT_LIGHT_SHADER_STRUCT = `
   };
 `
 
-export const DIRECTIONAL_LIGHT_SHADER_STRUCT = `
+export const DirectionalLightStruct = `
   struct DirectionalLight {
     direction: vec3<f32>,
     color: vec3<f32>,
   }
 `
 
-export const SURFACE_SHADER_STRUCT = `
+export const SurfaceShaderStruct = `
   struct Surface {
     baseColor: vec4<f32>,
     albedo: vec4<f32>,
     metallic: f32,
     roughness: f32,
+		materialID: f32,
     N: vec3<f32>,
     F0: vec3<f32>,
     V: vec3<f32>,
   };
 `
 
-export const LIGHT_RADIANCE_PBR_SHADER_FN = `
+export const LightRadiance = `
   fn rangeAttenuation(range : f32, distance : f32) -> f32 {
     if (range <= 0.0) {
         // Negative range means no cutoff
@@ -147,7 +148,7 @@ export const LIGHT_RADIANCE_PBR_SHADER_FN = `
 `
 
 // see http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
-export const LINEAR_TO_SRGB_SHADER_FN = `
+export const LinearToSRGB = `
   let GAMMA = 2.2;
   fn linearTosRGB(linear: vec3<f32>) -> vec3<f32> {
     let INV_GAMMA = 1.0 / GAMMA;

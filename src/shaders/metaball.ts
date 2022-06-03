@@ -3,7 +3,7 @@ import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
 } from '../marching-cubes-tables'
-import { ProjectionUniforms, ViewUniforms } from './shared'
+import { ProjectionUniforms, ViewUniforms } from './shared-chunks'
 
 export const IsosurfaceVolume = `
   struct IsosurfaceVolume {
@@ -254,15 +254,9 @@ export const MarchingCubesComputeSource = `
   }
 `
 
-export const METABALLS_VERTEX_SHADER = `
+export const MetaballsVertexShader = `
     ${ProjectionUniforms}
     ${ViewUniforms}
-
-    struct Model {
-      matrix: mat4x4<f32>,
-    }
-
-    @group(1) @binding(0) var<uniform> model: Model;
 
     struct Inputs {
       @location(0) position: vec3<f32>,
@@ -289,22 +283,23 @@ export const METABALLS_VERTEX_SHADER = `
     }
 `
 
-export const METABALLS_FRAGMENT_SHADER = `
+export const MetaballsFragmentShader = `
     struct Inputs {
       @location(0) normal: vec3<f32>,
 			@location(1) worldPosition: vec4<f32>,
     }
 		struct Output {
 			@location(0) position: vec4<f32>,
-			@location(1) normal: vec4<f32>,	
+			@location(1) normalMaterialID: vec4<f32>,	
 			@location(2) albedo: vec4<f32>,	
 		}
     @stage(fragment)
     fn main(input: Inputs) -> Output {
+			let materialID = 0.0;
 			var normal = normalize(input.normal);
       var output: Output;
 			output.position = vec4(input.worldPosition.xyz, 0.0);
-			output.normal = vec4(normal, 0.0);
+			output.normalMaterialID = vec4(normal, materialID);
 			output.albedo = vec4(1.0, 1.0, 0.0, 1.0);
 			return output;
     }

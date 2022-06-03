@@ -1,58 +1,55 @@
-import { IMetaballPos, IVolumeSettings } from './protocol'
+import { IMetaballPos, IVolumeSettings } from '../protocol'
 
 import {
   DEPTH_FORMAT,
   MAX_METABALLS,
   METABALLS_COMPUTE_WORKGROUP_SIZE,
-} from './constants'
+} from '../constants'
 
 // import getClockPositions from './get-clock-positions'
 
 import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
-} from './marching-cubes-tables'
+} from '../marching-cubes-tables'
 
 import {
   MarchingCubesComputeSource,
   MetaballFieldComputeSource,
-  METABALLS_FRAGMENT_SHADER,
-  METABALLS_VERTEX_SHADER,
-} from './shaders/metaball'
+  MetaballsFragmentShader,
+  MetaballsVertexShader,
+} from '../shaders/metaball'
 
-import WebGPURenderer from './webgpu-renderer'
+import { WebGPURenderer } from '../webgpu-renderer'
 
-export default class MetaballRenderer {
-  renderer: WebGPURenderer
-  volume: IVolumeSettings
+export class Metaballs {
+  private volume: IVolumeSettings
 
-  tablesBuffer: GPUBuffer
-  metaballBuffer: GPUBuffer
-  volumeBuffer: GPUBuffer
-  vertexBuffer: GPUBuffer
-  normalBuffer: GPUBuffer
-  indexBuffer: GPUBuffer
-  indirectRenderBuffer: GPUBuffer
+  private tablesBuffer: GPUBuffer
+  private metaballBuffer: GPUBuffer
+  private volumeBuffer: GPUBuffer
+  private vertexBuffer: GPUBuffer
+  private normalBuffer: GPUBuffer
+  private indexBuffer: GPUBuffer
+  private indirectRenderBuffer: GPUBuffer
 
-  computeMetaballsPipeline!: GPUComputePipeline
-  computeMarchingCubesPipeline!: GPUComputePipeline
-  renderMetaballsPipeline!: GPURenderPipeline
+  private computeMetaballsPipeline!: GPUComputePipeline
+  private computeMarchingCubesPipeline!: GPUComputePipeline
+  private renderMetaballsPipeline!: GPURenderPipeline
 
-  computeMetaballsBindGroup!: GPUBindGroup
-  computeMarchingCubesBindGroup!: GPUBindGroup
+  private computeMetaballsBindGroup!: GPUBindGroup
+  private computeMarchingCubesBindGroup!: GPUBindGroup
 
-  indirectRenderArray: Uint32Array
-  metaballArray: ArrayBuffer
-  metaballArrayHeader: Uint32Array
-  metaballArrayBalls: Float32Array
+  private indirectRenderArray: Uint32Array
+  private metaballArray: ArrayBuffer
+  private metaballArrayHeader: Uint32Array
+  private metaballArrayBalls: Float32Array
 
-  numBlob = MAX_METABALLS
-  indexCount: number
+  private indexCount: number
 
-  ballPositions: IMetaballPos[] = []
+  private ballPositions: IMetaballPos[] = []
 
-  constructor(renderer: WebGPURenderer, volume: IVolumeSettings) {
-    this.renderer = renderer
+  constructor(private renderer: WebGPURenderer, volume: IVolumeSettings) {
     this.volume = volume
 
     this.tablesBuffer = this.renderer.device.createBuffer({
@@ -278,13 +275,13 @@ export default class MetaballRenderer {
             },
           ],
           module: this.renderer.device.createShaderModule({
-            code: METABALLS_VERTEX_SHADER,
+            code: MetaballsVertexShader,
           }),
         },
         fragment: {
           entryPoint: 'main',
           module: this.renderer.device.createShaderModule({
-            code: METABALLS_FRAGMENT_SHADER,
+            code: MetaballsFragmentShader,
           }),
           targets: [
             { format: 'rgba32float' },

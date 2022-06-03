@@ -1,9 +1,8 @@
+import { WebGPURenderer } from '../webgpu-renderer'
+import { EffectVertexShader } from '../shaders/shared-chunks'
 import { IScreenEffect } from '../protocol'
-import { EffectVertexShader } from '../shaders/shared'
-import WebGPURenderer from '../webgpu-renderer'
 
 export class Effect {
-  protected renderer: WebGPURenderer
   protected renderPipeline: GPURenderPipeline
 
   private bindGroups: GPUBindGroup[] = []
@@ -12,7 +11,7 @@ export class Effect {
   private indexBuffer: GPUBuffer
 
   constructor(
-    renderer: WebGPURenderer,
+    protected renderer: WebGPURenderer,
     { fragmentShader, bindGroupLayouts = [], bindGroups = [] }: IScreenEffect,
   ) {
     this.renderer = renderer
@@ -20,7 +19,7 @@ export class Effect {
 
     // prettier-ignore
     const interleavedData = new Float32Array([
-			// pos            // uv
+			// pos   // uv
 			-1,  1,  0.0, 1.0,
 			-1, -1,  0.0, 0.0,
 			 1, -1,  1.0, 1.0,
@@ -90,7 +89,7 @@ export class Effect {
         module: this.renderer.device.createShaderModule({
           code: fragmentShader,
         }),
-        targets: [{ format: 'bgra8unorm' }],
+        targets: [{ format: this.renderer.presentationFormat }],
       },
     })
   }
@@ -105,12 +104,5 @@ export class Effect {
     }
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
-  }
-
-  protected postRender(renderPass: GPURenderPassEncoder): void {
-    if (!this.renderPipeline) {
-      return
-    }
-    renderPass.drawIndexed(6)
   }
 }
