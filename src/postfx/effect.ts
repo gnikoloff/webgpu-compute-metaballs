@@ -5,8 +5,7 @@ import { IScreenEffect } from '../protocol'
 export class Effect {
   protected renderPipeline: GPURenderPipeline
 
-  private bindGroups: GPUBindGroup[] = []
-
+  private readonly bindGroups: GPUBindGroup[] = []
   private vertexBuffer: GPUBuffer
   private indexBuffer: GPUBuffer
 

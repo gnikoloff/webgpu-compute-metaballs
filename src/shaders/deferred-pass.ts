@@ -31,6 +31,8 @@ export const DeferredPassFragmentShader = `
 	}
 
 	let PI = ${Math.PI};
+	let LOG2 = ${Math.LOG2E};
+	
 	${PointLightStruct}
 	${DirectionalLightStruct}
 	${SurfaceShaderStruct}
@@ -110,7 +112,7 @@ export const DeferredPassFragmentShader = `
 			pointLight.intensity = 3.0;
 
 			var pointLight2: PointLight;
-			pointLight2.pointToLight = vec3(-2.8, 2.5, -0.0) - worldPosition;
+			pointLight2.pointToLight = vec3(12.8, 2.5, -0.0) - worldPosition;
 			pointLight2.color = vec3(1.0, 0.0, 0.0);
 			pointLight2.range = 20.0;
 			pointLight2.intensity = 3.0;
@@ -153,11 +155,23 @@ export const DeferredPassFragmentShader = `
 				
 			// output.Color = vec4(color.rgb, albedo.a);
 			output.color = vec4(color.rgb, 1.0);
+			
+
+			let fogDensity = 0.085;
+			let fogDistance = length(worldPosition.xyz);
+			var fogAmount = 1.0 - exp2(-fogDensity * fogDensity * fogDistance * fogDistance * LOG2);
+			fogAmount = clamp(fogAmount, 0.0, 1.0);
+
+			let fogColor = vec4(0.1, 0.1, 0.1, 1.0);
+			output.color = mix(output.color, fogColor, fogAmount);
+
 		} else if (surface.materialID == 0.1) {
 			output.color = vec4(1.0);
+			
 		} else {
-			output.color = vec4(1.0, 0.0, 0.0, 1.0);
+			output.color = vec4(0.1, 0.1, 0.1, 1.0);
 		}
+		
 		return output;
 
 		

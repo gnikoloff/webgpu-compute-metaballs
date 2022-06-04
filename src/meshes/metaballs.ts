@@ -11,7 +11,7 @@ import {
 import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
-} from '../marching-cubes-tables'
+} from '../geometry-helper-data'
 
 import {
   MarchingCubesComputeSource,
@@ -47,7 +47,7 @@ export class Metaballs {
 
   private indexCount: number
 
-  private ballPositions: IMetaballPos[] = []
+  private readonly ballPositions: IMetaballPos[] = []
 
   constructor(private renderer: WebGPURenderer, volume: IVolumeSettings) {
     this.volume = volume

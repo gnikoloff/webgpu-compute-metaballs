@@ -2,7 +2,7 @@ import { METABALLS_COMPUTE_WORKGROUP_SIZE } from '../constants'
 import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
-} from '../marching-cubes-tables'
+} from '../geometry-helper-data'
 import { ProjectionUniforms, ViewUniforms } from './shared-chunks'
 
 export const IsosurfaceVolume = `

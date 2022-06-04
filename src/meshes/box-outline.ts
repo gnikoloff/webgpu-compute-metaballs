@@ -9,7 +9,7 @@ export class BoxOutline {
   private vertexBuffer: GPUBuffer
   private indexBuffer: GPUBuffer
 
-  private renderPipelines: GPURenderPipeline[] = []
+  private renderPipeline: GPURenderPipeline
 
   constructor(private renderer: WebGPURenderer) {
     // prettier-ignore
@@ -55,70 +55,65 @@ export class BoxOutline {
   }
 
   async init() {
-    const renderPipeline = await this.renderer.device.createRenderPipelineAsync(
-      {
-        label: 'box outline render pipeline',
-        layout: this.renderer.device.createPipelineLayout({
-          label: 'box outline render pipeline layout',
-          bindGroupLayouts: [this.renderer.bindGroupsLayouts.frame],
-        }),
-        primitive: {
-          topology: 'line-strip',
-          stripIndexFormat: 'uint16',
-        },
-        depthStencil: {
-          format: DEPTH_FORMAT,
-          depthWriteEnabled: true,
-          depthCompare: 'less',
-        },
-        vertex: {
-          entryPoint: 'main',
-          buffers: [
-            {
-              arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
-              attributes: [
-                {
-                  shaderLocation: 0,
-                  format: 'float32x3',
-                  offset: 0,
-                },
-              ],
-            },
-          ],
-          module: this.renderer.device.createShaderModule({
-            code: BoxOutlineVertexShader,
-          }),
-        },
-        fragment: {
-          entryPoint: 'main',
-          module: this.renderer.device.createShaderModule({
-            code: BoxOutlineFragmentShader,
-          }),
-          targets: [
-            { format: 'rgba32float' },
-            // normal
-            { format: 'rgba32float' },
-            // albedo
-            {
-              format: 'bgra8unorm',
-            },
-          ],
-        },
+    this.renderPipeline = await this.renderer.device.createRenderPipelineAsync({
+      label: 'box outline render pipeline',
+      layout: this.renderer.device.createPipelineLayout({
+        label: 'box outline render pipeline layout',
+        bindGroupLayouts: [this.renderer.bindGroupsLayouts.frame],
+      }),
+      primitive: {
+        topology: 'line-strip',
+        stripIndexFormat: 'uint16',
       },
-    )
-    this.renderPipelines.push(renderPipeline)
+      depthStencil: {
+        format: DEPTH_FORMAT,
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+      },
+      vertex: {
+        entryPoint: 'main',
+        buffers: [
+          {
+            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              {
+                shaderLocation: 0,
+                format: 'float32x3',
+                offset: 0,
+              },
+            ],
+          },
+        ],
+        module: this.renderer.device.createShaderModule({
+          code: BoxOutlineVertexShader,
+        }),
+      },
+      fragment: {
+        entryPoint: 'main',
+        module: this.renderer.device.createShaderModule({
+          code: BoxOutlineFragmentShader,
+        }),
+        targets: [
+          { format: 'rgba32float' },
+          // normal
+          { format: 'rgba32float' },
+          // albedo
+          {
+            format: 'bgra8unorm',
+          },
+        ],
+      },
+    })
   }
 
   public render(renderPass: GPURenderPassEncoder): void {
-    if (!this.renderPipelines.length) {
+    if (!this.renderPipeline) {
       return
     }
-    for (let i = 0; i < this.renderPipelines.length; i++) {
-      renderPass.setPipeline(this.renderPipelines[i])
-      renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
-      renderPass.setVertexBuffer(0, this.vertexBuffer)
-      renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
-      renderPass.drawIndexed(16)
-    }
+    renderPass.setPipeline(this.renderPipeline)
+    renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
+    renderPass.setVertexBuffer(0, this.vertexBuffer)
+    renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
+    renderPass.drawIndexed(16)
   }
 }

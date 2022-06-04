@@ -1,10 +1,12 @@
 import { IVolumeSettings } from './protocol'
-import { Metaballs } from './meshes/metaballs'
 import { WebGPURenderer } from './webgpu-renderer'
 import { PerspectiveCamera } from './lib/camera/perspective-camera'
 import { CameraController } from './lib/camera/camera-controller'
 import { DeferredPass } from './postfx/deferred-pass'
+
+import { Metaballs } from './meshes/metaballs'
 import { BoxOutline } from './meshes/box-outline'
+import { Ground } from './meshes/ground'
 ;(async () => {
   let oldTime = 0
 
@@ -19,7 +21,7 @@ import { BoxOutline } from './meshes/box-outline'
     (45 * Math.PI) / 180,
     innerWidth / innerHeight,
     0.1,
-    40,
+    100,
   )
     .setPosition({ x: 10, y: 5, z: -12 })
     .lookAt({ x: 0, y: 0, z: 0 })
@@ -98,11 +100,12 @@ import { BoxOutline } from './meshes/box-outline'
     yStep: 0.1,
     zStep: 0.1,
 
-    isoLevel: 10,
+    isoLevel: 40,
   }
 
   const metaballs = new Metaballs(renderer, volume)
   const boxOutline = new BoxOutline(renderer)
+  const ground = new Ground(renderer)
 
   // const gridHelper = new HelperGrid(renderer)
   // const gltfModel = new GLTFModel(renderer)
@@ -176,6 +179,7 @@ import { BoxOutline } from './meshes/box-outline'
     })
     metaballs.render(gBufferPass)
     boxOutline.render(gBufferPass)
+    ground.render(gBufferPass)
 
     gBufferPass.end()
 
