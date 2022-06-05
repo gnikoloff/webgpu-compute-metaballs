@@ -32,18 +32,18 @@ export const UpdatePointLightsComputeShader = `
 		// lightsBuffer.lights[index].position.x = cos(angle + speed) * radius;
 		// lightsBuffer.lights[index].position.z = sin(angle + speed) * radius;
 
-		lightsBuffer.lights[index].position.y += lightsBuffer.lights[index].velocity.y * view.deltaTime;
+		lightsBuffer.lights[index].position.x += lightsBuffer.lights[index].velocity.x * view.deltaTime;
 		lightsBuffer.lights[index].position.z += lightsBuffer.lights[index].velocity.z * view.deltaTime;
 		
 		let size = 30.0;
 		let halfSize = size / 2.0;
 		
-		if (lightsBuffer.lights[index].position.y < -halfSize) {
-			lightsBuffer.lights[index].position.y = -halfSize;
-			lightsBuffer.lights[index].velocity.y *= -1.0;
-		} else if (lightsBuffer.lights[index].position.y > halfSize) {
-			lightsBuffer.lights[index].position.y = halfSize;
-			lightsBuffer.lights[index].velocity.y *= -1.0;
+		if (lightsBuffer.lights[index].position.x < -halfSize) {
+			lightsBuffer.lights[index].position.x = -halfSize;
+			lightsBuffer.lights[index].velocity.x *= -1.0;
+		} else if (lightsBuffer.lights[index].position.x > halfSize) {
+			lightsBuffer.lights[index].position.x = halfSize;
+			lightsBuffer.lights[index].velocity.x *= -1.0;
 		}
 
 		if (lightsBuffer.lights[index].position.z < -halfSize) {

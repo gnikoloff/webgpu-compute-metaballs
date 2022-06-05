@@ -8,7 +8,7 @@ export const GroundVertexShader = `
 		matrix: mat4x4<f32>,
 	}
 
-	@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
+	@group(0) @binding(0) var<uniform> projection: ProjectionUniformsStruct;
 	@group(0) @binding(1) var<uniform> view: ViewUniformsStruct;
 	@group(1) @binding(0) var<uniform> model: ModelUniforms;
 
@@ -19,8 +19,7 @@ export const GroundVertexShader = `
 	}
 
 	struct Output {
-		@location(0) worldPosition: vec4<f32>,
-		@location(1) normal: vec3<f32>,
+		@location(0) normal: vec3<f32>,
 		@builtin(position) position: vec4<f32>,
 	}
 
@@ -43,7 +42,6 @@ export const GroundVertexShader = `
 											view.matrix *
 											worldPosition;
 
-		output.worldPosition = worldPosition;
 		output.normal = input.normal;
 		return output;
 	}
@@ -51,22 +49,18 @@ export const GroundVertexShader = `
 
 export const GroundFragmentShader = `
 	struct Inputs {
-		@location(0) worldPosition: vec4<f32>,
-		@location(1) normal: vec3<f32>,
+		@location(0) normal: vec3<f32>,
 	}
 	struct Output {
-		@location(0) position: vec4<f32>,
-		@location(1) normal: vec4<f32>,	
-		@location(2) albedo: vec4<f32>,	
+		@location(0) normal: vec4<f32>,	
+		@location(1) albedo: vec4<f32>,	
 	}
 
 	@stage(fragment)
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		var normal = normalize(input.normal);
-		output.position = vec4(input.worldPosition.xyz, 0.0);
 		output.normal = vec4(normal.rgb, 0.0);
-
 		output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
 		return output;
 	}

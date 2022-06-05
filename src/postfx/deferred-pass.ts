@@ -4,8 +4,7 @@ import { PointLightsCompute } from '../compute/point-lights'
 import { DeferredPassFragmentShader } from '../shaders/deferred-pass'
 
 export class DeferredPass extends Effect {
-  private pointLightsCompute: PointLightsCompute
-
+  public pointLightsCompute: PointLightsCompute
   public framebufferDescriptor: GPURenderPassDescriptor
 
   public get isReady(): boolean {
@@ -15,19 +14,12 @@ export class DeferredPass extends Effect {
   constructor(renderer: WebGPURenderer) {
     const pointLightsCompute = new PointLightsCompute(renderer)
 
-    const gBufferTexturePos = renderer.device.createTexture({
-      label: 'gbuffer position texture',
-      size: [...renderer.outputSize, 1],
-      usage:
-        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-      format: 'rgba32float',
-    })
     const gBufferTextureNormal = renderer.device.createTexture({
       label: 'gbuffer normal texture',
       size: [...renderer.outputSize, 1],
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-      format: 'rgba32float',
+      format: 'rgba16float',
     })
     const gbufferTextureDiffuse = renderer.device.createTexture({
       label: 'gbuffer diffuse texture',
@@ -64,14 +56,14 @@ export class DeferredPass extends Effect {
         {
           binding: 3,
           visibility: GPUShaderStage.FRAGMENT,
-          texture: {
-            sampleType: 'unfilterable-float',
-          },
+          texture: {},
         },
         {
           binding: 4,
           visibility: GPUShaderStage.FRAGMENT,
-          texture: {},
+          texture: {
+            sampleType: 'depth',
+          },
         },
       ],
     })
@@ -94,15 +86,15 @@ export class DeferredPass extends Effect {
         },
         {
           binding: 2,
-          resource: gBufferTexturePos.createView(),
-        },
-        {
-          binding: 3,
           resource: gBufferTextureNormal.createView(),
         },
         {
-          binding: 4,
+          binding: 3,
           resource: gbufferTextureDiffuse.createView(),
+        },
+        {
+          binding: 4,
+          resource: renderer.textures.gBufferDepthTexture.createView(),
         },
       ],
     })
@@ -115,12 +107,6 @@ export class DeferredPass extends Effect {
 
     this.framebufferDescriptor = {
       colorAttachments: [
-        {
-          view: gBufferTexturePos.createView(),
-          clearValue: [0, 0, 0, 1],
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
         {
           view: gBufferTextureNormal.createView(),
           clearValue: [0, 0, 0, 1],
@@ -135,7 +121,7 @@ export class DeferredPass extends Effect {
         },
       ],
       depthStencilAttachment: {
-        view: renderer.textures.gbufferDepthTexture.createView(),
+        view: renderer.textures.gBufferDepthTexture.createView(),
         depthLoadOp: 'clear',
         depthClearValue: 1,
         depthStoreOp: 'store',

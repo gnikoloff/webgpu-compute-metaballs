@@ -17,12 +17,11 @@ export class Effect {
     this.bindGroups = bindGroups
 
     // prettier-ignore
-    const interleavedData = new Float32Array([
-			// pos   // uv
-			-1,  1,  0.0, 1.0,
-			-1, -1,  0.0, 0.0,
-			 1, -1,  1.0, 1.0,
-			 1,  1,  1.0, 0.0,
+    const vertexData = new Float32Array([
+			-1,  1,
+			-1, -1,
+			 1, -1,
+			 1,  1,
 		])
     // prettier-ignore
     const indices = new Uint16Array([
@@ -30,12 +29,12 @@ export class Effect {
 			3, 1, 0
     ])
     this.vertexBuffer = renderer.device.createBuffer({
-      size: interleavedData.byteLength,
+      size: vertexData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       label: 'fullscreen effect vertex buffer',
       mappedAtCreation: true,
     })
-    new Float32Array(this.vertexBuffer.getMappedRange()).set(interleavedData)
+    new Float32Array(this.vertexBuffer.getMappedRange()).set(vertexData)
     this.vertexBuffer.unmap()
 
     this.indexBuffer = renderer.device.createBuffer({
@@ -64,17 +63,12 @@ export class Effect {
         entryPoint: 'main',
         buffers: [
           {
-            arrayStride: 4 * Float32Array.BYTES_PER_ELEMENT,
+            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
               {
                 shaderLocation: 0,
                 format: 'float32x2',
                 offset: 0 * Float32Array.BYTES_PER_ELEMENT,
-              },
-              {
-                shaderLocation: 1,
-                format: 'float32x2',
-                offset: 2 * Float32Array.BYTES_PER_ELEMENT,
               },
             ],
           },

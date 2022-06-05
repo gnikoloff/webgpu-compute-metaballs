@@ -1,9 +1,9 @@
 import { vec4 } from 'gl-matrix'
-import { UpdatePointLightsComputeShader } from '../shaders/point-lights'
+import { UpdatePointLightsComputeShader } from '../shaders/point-lights-compute'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class PointLightsCompute {
-  private static readonly MAX_LIGHTS_COUNT = 50
+  public static readonly MAX_LIGHTS_COUNT = 50
 
   private lightsBufferComputeBindGroupLayout: GPUBindGroupLayout
   private lightsBufferComputeBindGroup: GPUBindGroup
@@ -17,7 +17,7 @@ export class PointLightsCompute {
   }
 
   constructor(private renderer: WebGPURenderer) {
-    const lightsDataStride = 12
+    const lightsDataStride = 16
     const lightsBufferByteSize =
       lightsDataStride *
       PointLightsCompute.MAX_LIGHTS_COUNT *
@@ -32,23 +32,42 @@ export class PointLightsCompute {
     const tmpVec4 = vec4.create()
     for (let i = 0; i < PointLightsCompute.MAX_LIGHTS_COUNT; i++) {
       const offset = lightsDataStride * i
+
+      const x = (Math.random() * 2 - 1) * 20
+      const y = -2
+      const z = (Math.random() * 2 - 1) * 20
+
+      const velX = Math.random() * 2
+      const velY = Math.random() * 2
+      const velZ = Math.random() * 2
+
+      const r = Math.random()
+      const g = Math.random()
+      const b = Math.random()
+
+      const radius = 20
+      const intensity =
+        Math.random() > 0.8 ? Math.random() * 10 + 4 : Math.random() * 25 + 5
+
       // position
-      tmpVec4[0] = (Math.random() * 2 - 1) * 20
-      tmpVec4[1] = -2
-      tmpVec4[2] = (Math.random() * 2 - 1) * 20
+      tmpVec4[0] = x
+      tmpVec4[1] = y
+      tmpVec4[2] = z
       lightsData.set(tmpVec4, offset)
       // velocity
-      tmpVec4[0] = Math.random() * 2
-      tmpVec4[1] = Math.random() * 2
-      tmpVec4[2] = Math.random() * 2
+      tmpVec4[0] = velX
+      tmpVec4[1] = velY
+      tmpVec4[2] = velZ
       lightsData.set(tmpVec4, offset + 4)
       // color
-      tmpVec4[0] = Math.random() * 2
-      tmpVec4[1] = Math.random() * 2
-      tmpVec4[2] = Math.random() * 2
+      tmpVec4[0] = r
+      tmpVec4[1] = g
+      tmpVec4[2] = b
       // radius
-      tmpVec4[3] = 20
+      tmpVec4[3] = radius
       lightsData.set(tmpVec4, offset + 8)
+      // intensity
+      lightsData.set([intensity], offset + 12)
     }
     this.lightsBuffer.unmap()
 

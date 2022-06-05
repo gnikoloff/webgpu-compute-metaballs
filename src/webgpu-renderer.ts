@@ -64,6 +64,7 @@ export class WebGPURenderer {
 
     const projectionUBOByteLength =
       16 * Float32Array.BYTES_PER_ELEMENT + // matrix
+      16 * Float32Array.BYTES_PER_ELEMENT + // inverse matrix
       8 * Float32Array.BYTES_PER_ELEMENT + // screen size
       1 * Float32Array.BYTES_PER_ELEMENT + // near
       1 * Float32Array.BYTES_PER_ELEMENT // far
@@ -75,6 +76,7 @@ export class WebGPURenderer {
 
     const viewUBOByteLength =
       16 * Float32Array.BYTES_PER_ELEMENT + // matrix
+      16 * Float32Array.BYTES_PER_ELEMENT + // inverse matrix
       4 * Float32Array.BYTES_PER_ELEMENT + // camera position
       1 * Float32Array.BYTES_PER_ELEMENT + // time
       1 * Float32Array.BYTES_PER_ELEMENT // delta time
@@ -118,17 +120,21 @@ export class WebGPURenderer {
 
     this.textures.depthTexture = this.device.createTexture({
       size: {
-        width: this.outputSize[0] * devicePixelRatio,
-        height: this.outputSize[1] * devicePixelRatio,
+        width: this.outputSize[0],
+        height: this.outputSize[1],
       },
       format: DEPTH_FORMAT,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     })
-
-    this.textures.gbufferDepthTexture = this.device.createTexture({
-      size: [...this.outputSize, 1],
+    this.textures.gBufferDepthTexture = this.device.createTexture({
+      size: {
+        width: this.outputSize[0],
+        height: this.outputSize[1],
+      },
       format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+      usage:
+        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     })
 
     this.depthAndStencilAttachment = {

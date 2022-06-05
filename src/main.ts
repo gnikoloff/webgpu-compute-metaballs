@@ -7,6 +7,7 @@ import { DeferredPass } from './postfx/deferred-pass'
 import { Metaballs } from './meshes/metaballs'
 import { BoxOutline } from './meshes/box-outline'
 import { Ground } from './meshes/ground'
+import { Particles } from './meshes/particles'
 ;(async () => {
   let oldTime = 0
 
@@ -56,16 +57,24 @@ import { Ground } from './meshes/ground'
   renderer.device.queue.writeBuffer(
     renderer.ubos.projectionUBO,
     16 * Float32Array.BYTES_PER_ELEMENT,
+    perspCamera.projectionInvMatrix as Float32Array,
+  )
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.projectionUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT + 16 * Float32Array.BYTES_PER_ELEMENT,
     new Float32Array([innerWidth, innerHeight]),
   )
   renderer.device.queue.writeBuffer(
     renderer.ubos.projectionUBO,
-    16 * Float32Array.BYTES_PER_ELEMENT + 8 * Float32Array.BYTES_PER_ELEMENT,
+    16 * Float32Array.BYTES_PER_ELEMENT +
+      16 * Float32Array.BYTES_PER_ELEMENT +
+      8 * Float32Array.BYTES_PER_ELEMENT,
     new Float32Array([perspCamera.near]),
   )
   renderer.device.queue.writeBuffer(
     renderer.ubos.projectionUBO,
     16 * Float32Array.BYTES_PER_ELEMENT +
+      16 * Float32Array.BYTES_PER_ELEMENT +
       8 * Float32Array.BYTES_PER_ELEMENT +
       1 * Float32Array.BYTES_PER_ELEMENT,
     new Float32Array([perspCamera.far]),
@@ -79,6 +88,11 @@ import { Ground } from './meshes/ground'
   renderer.device.queue.writeBuffer(
     renderer.ubos.viewUBO,
     16 * Float32Array.BYTES_PER_ELEMENT,
+    perspCamera.viewInvMatrix as Float32Array,
+  )
+  renderer.device.queue.writeBuffer(
+    renderer.ubos.viewUBO,
+    16 * Float32Array.BYTES_PER_ELEMENT + 16 * Float32Array.BYTES_PER_ELEMENT,
     new Float32Array(perspCamera.position),
   )
 
@@ -98,9 +112,14 @@ import { Ground } from './meshes/ground'
     isoLevel: 40,
   }
 
+  const deferredPass = new DeferredPass(renderer)
   const metaballs = new Metaballs(renderer, volume)
   const boxOutline = new BoxOutline(renderer)
   const ground = new Ground(renderer)
+  const particles = new Particles(
+    renderer,
+    deferredPass.pointLightsCompute.lightsBuffer,
+  )
 
   // const gridHelper = new HelperGrid(renderer)
   // const gltfModel = new GLTFModel(renderer)
@@ -115,8 +134,6 @@ import { Ground } from './meshes/ground'
 
   // GBuffer
   // const deferredPass = new DeferredPass(renderer)
-
-  const deferredPass = new DeferredPass(renderer)
 
   requestAnimationFrame(renderFrame)
 
@@ -135,16 +152,26 @@ import { Ground } from './meshes/ground'
     renderer.device.queue.writeBuffer(
       renderer.ubos.viewUBO,
       16 * Float32Array.BYTES_PER_ELEMENT,
+      perspCamera.viewInvMatrix as Float32Array,
+    )
+    renderer.device.queue.writeBuffer(
+      renderer.ubos.viewUBO,
+      16 * Float32Array.BYTES_PER_ELEMENT + 16 * Float32Array.BYTES_PER_ELEMENT,
       new Float32Array(perspCamera.position),
     )
     renderer.device.queue.writeBuffer(
       renderer.ubos.viewUBO,
-      16 * Float32Array.BYTES_PER_ELEMENT + 3 * Float32Array.BYTES_PER_ELEMENT,
+      16 * Float32Array.BYTES_PER_ELEMENT +
+        16 * Float32Array.BYTES_PER_ELEMENT +
+        3 * Float32Array.BYTES_PER_ELEMENT,
       new Float32Array([time]),
     )
     renderer.device.queue.writeBuffer(
       renderer.ubos.viewUBO,
-      16 * Float32Array.BYTES_PER_ELEMENT + 4 * Float32Array.BYTES_PER_ELEMENT,
+      16 * Float32Array.BYTES_PER_ELEMENT +
+        16 * Float32Array.BYTES_PER_ELEMENT +
+        3 * Float32Array.BYTES_PER_ELEMENT +
+        1 * Float32Array.BYTES_PER_ELEMENT,
       new Float32Array([dt]),
     )
 
@@ -183,6 +210,7 @@ import { Ground } from './meshes/ground'
     metaballs.render(gBufferPass)
     boxOutline.render(gBufferPass)
     ground.render(gBufferPass)
+    particles.render(gBufferPass)
 
     gBufferPass.end()
 

@@ -65,9 +65,8 @@ export class Metaballs {
             code: MetaballsFragmentShader,
           }),
           targets: [
-            { format: 'rgba32float' },
-            // normal
-            { format: 'rgba32float' },
+            // normal + material id
+            { format: 'rgba16float' },
             // albedo
             {
               format: 'bgra8unorm',

@@ -12,7 +12,6 @@ export const BoxOutlineVertexShader = `
 	}
 
 	struct Output {
-		@location(0) worldPosition: vec4<f32>,
 		@builtin(position) position: vec4<f32>,
 	}
 
@@ -24,24 +23,18 @@ export const BoxOutlineVertexShader = `
 											view.matrix *
 											worldPosition;
 
-		output.worldPosition = worldPosition;
 		return output;
 	}
 `
 
 export const BoxOutlineFragmentShader = `
-	struct Inputs {
-		@location(0) worldPosition: vec4<f32>,
-	}
 	struct Output {
-		@location(0) position: vec4<f32>,
-		@location(1) normal: vec4<f32>,	
-		@location(2) albedo: vec4<f32>,	
+		@location(0) normal: vec4<f32>,	
+		@location(1) albedo: vec4<f32>,	
 	}
 	@stage(fragment)
-	fn main(input: Inputs) -> Output {
+	fn main() -> Output {
 		var output: Output;
-		output.position = vec4(input.worldPosition.xyz, 0.0);
 		output.normal = vec4(0.0, 0.0, 0.0, 0.1);
 		output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
 		return output;

@@ -10,30 +10,34 @@ import {
   ReinhardTonemapping,
   SurfaceShaderStruct,
 } from './pbr-chunks'
-import { PointLightConfigStruct, InputPointLightStructs } from './shared-chunks'
+import {
+  PointLightConfigStruct,
+  InputPointLightStructs,
+  ProjectionUniformsStruct,
+  ViewUniformsStruct,
+  LinearizeDepthSnippet,
+} from './shared-chunks'
 
 export const DeferredPassFragmentShader = `
+	${ProjectionUniformsStruct}
+	${ViewUniformsStruct}
 	${InputPointLightStructs}
 	${PointLightConfigStruct}
 	${PointLightStruct}
 	${DirectionalLightStruct}
 	${SurfaceShaderStruct}
 
-	struct View {
-		position: vec3<f32>,
-	}
-
 	@group(0) @binding(0) var<storage, read> lightsBuffer: LightsBuffer;
 	@group(0) @binding(1) var<uniform> lightsConfig: LightsConfig;
-	@group(0) @binding(2) var positionTexture: texture_2d<f32>;
-	@group(0) @binding(3) var normalTexture: texture_2d<f32>;
-	@group(0) @binding(4) var diffuseTexture: texture_2d<f32>;
+	@group(0) @binding(2) var normalTexture: texture_2d<f32>;
+	@group(0) @binding(3) var diffuseTexture: texture_2d<f32>;
+	@group(0) @binding(4) var depthTexture: texture_depth_2d;
 
-	@group(1) @binding(0) var<uniform> view: View;
+	@group(1) @binding(0) var<uniform> projection: ProjectionUniformsStruct;
+	@group(1) @binding(1) var<uniform> view: ViewUniformsStruct;
 
 	struct Inputs {
 		@builtin(position) coords: vec4<f32>,
-		@location(0) uv: vec2<f32>,
 	}
 	struct Output {
 		@location(0) color: vec4<f32>,
@@ -48,16 +52,27 @@ export const DeferredPassFragmentShader = `
 	${ReinhardTonemapping}
 	${LightRadiance}
 	${LinearToSRGB}
+	${LinearizeDepthSnippet}
 
 	@stage(fragment)
 	fn main(input: Inputs) -> Output {
 		// Pull data from GBuffer
-		let positionMetallic = textureLoad(
-			positionTexture,
-			vec2<i32>(floor(input.coords.xy)),
-			0
-		);
-		let worldPosition = positionMetallic.xyz;
+		// let positionMetallic = textureLoad(
+		// 	positionTexture,
+		// 	vec2<i32>(floor(input.coords.xy)),
+		// 	0
+		// );
+
+		let uv = input.coords.xy / projection.outputSize;
+
+		var depth = textureLoad(depthTexture, vec2<i32>(floor(input.coords.xy)), 0);
+		let x = uv.x * 2 - 1;
+		let y = (1 - uv.y) * 2 - 1;
+		let projectedPos = vec4(x, y, depth, 1.0);
+		var worldPosition = projection.inverseMatrix * projectedPos;
+		worldPosition = vec4(worldPosition.xyz / worldPosition.w, 1.0);
+		worldPosition = view.inverseMatrix * worldPosition;
+
 
 		let normalMaterialID = textureLoad(
 			normalTexture,
@@ -99,12 +114,12 @@ export const DeferredPassFragmentShader = `
 
 		var surface: Surface;
 		surface.albedo = albedo;
-		surface.metallic = positionMetallic.w;
+		surface.metallic = 0.0;
 		surface.N = normalMaterialID.xyz;
 		surface.roughness = 0.0;
 		surface.materialID = normalMaterialID.w;
 		surface.F0 = mix(vec3(0.04), albedo.rgb, vec3(surface.metallic));
-		surface.V = normalize(view.position - worldPosition);
+		surface.V = normalize(view.position - worldPosition.xyz);
 
 		var output: Output;
 
@@ -117,10 +132,10 @@ export const DeferredPassFragmentShader = `
 			for (var i : u32 = 0u; i < lightsConfig.numLights; i = i + 1u) {
     		let light = lightsBuffer.lights[i];
 				var pointLight: PointLight;
-				pointLight.pointToLight = light.position.xyz - worldPosition;
+				pointLight.pointToLight = light.position.xyz - worldPosition.xyz;
 				pointLight.color = light.color;
 				pointLight.range = light.range;
-				pointLight.intensity = 9.0;
+				pointLight.intensity = light.intensity;
 				Lo = Lo + PointLightRadiance(pointLight, surface);
 			}
 
@@ -142,13 +157,15 @@ export const DeferredPassFragmentShader = `
 			let fogColor = vec4(0.1, 0.1, 0.1, 1.0);
 			output.color = mix(output.color, fogColor, fogAmount);
 
-		} else if (surface.materialID == 0.1) {
+		} else if (0.1 - surface.materialID < 0.01 && surface.materialID < 0.1) {
 			output.color = vec4(albedo.rgb, 1.0);
 			
 		} else {
 			output.color = vec4(0.1, 0.1, 0.1, 1.0);
 		}
 		
+		// output.color = vec4(worldPosition.xyz, 1.0);
+		// output.color = vec4(vec3(LinearizeDepth(depth)), 1.0);
 		return output;
 
 		

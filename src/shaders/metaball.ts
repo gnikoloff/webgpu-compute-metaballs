@@ -268,20 +268,17 @@ export const MetaballsVertexShader = `
     
     struct Output {
       @location(0) normal: vec3<f32>,
-			@location(1) worldPosition: vec4<f32>,
       @builtin(position) position: vec4<f32>,
     }
 
     @stage(vertex)
     fn main(input: Inputs) -> Output {
       var output: Output;
-			let worldPosition = vec4<f32>(input.position, 1.0);
       output.position = projection.matrix *
                         view.matrix *
-                        worldPosition;
+                        vec4(input.position, 1.0);
 
       output.normal = input.normal;
-			output.worldPosition = worldPosition;
       return output;
     }
 `
@@ -289,19 +286,16 @@ export const MetaballsVertexShader = `
 export const MetaballsFragmentShader = `
     struct Inputs {
       @location(0) normal: vec3<f32>,
-			@location(1) worldPosition: vec4<f32>,
     }
 		struct Output {
-			@location(0) position: vec4<f32>,
-			@location(1) normalMaterialID: vec4<f32>,	
-			@location(2) albedo: vec4<f32>,	
+			@location(0) normalMaterialID: vec4<f32>,	
+			@location(1) albedo: vec4<f32>,	
 		}
     @stage(fragment)
     fn main(input: Inputs) -> Output {
 			let materialID = 0.0;
 			var normal = normalize(input.normal);
       var output: Output;
-			output.position = vec4(input.worldPosition.xyz, 0.0);
 			output.normalMaterialID = vec4(normal, materialID);
 			output.albedo = vec4(1.0, 1.0, 0.0, 1.0);
 			return output;

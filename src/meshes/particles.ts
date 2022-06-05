@@ -1,68 +1,96 @@
+import { PointLightsCompute } from '../compute/point-lights'
 import { DEPTH_FORMAT } from '../constants'
 import {
-  BoxOutlineFragmentShader,
-  BoxOutlineVertexShader,
-} from '../shaders/box-outline'
+  ParticlesFragmentShader,
+  ParticlesVertexShader,
+} from '../shaders/particles'
 import { WebGPURenderer } from '../webgpu-renderer'
 
-export class BoxOutline {
+export class Particles {
+  private renderPipeline: GPURenderPipeline
   private vertexBuffer: GPUBuffer
   private indexBuffer: GPUBuffer
 
-  private renderPipeline: GPURenderPipeline
+  private bindGroupLayout: GPUBindGroupLayout
+  private bindGroup: GPUBindGroup
 
-  constructor(private renderer: WebGPURenderer) {
+  private instanceCount = PointLightsCompute.MAX_LIGHTS_COUNT
+
+  constructor(
+    private renderer: WebGPURenderer,
+    private lightsBuffer: GPUBuffer,
+  ) {
     // prettier-ignore
-    const vertices = new Float32Array([
-			-1, -1, -1,
-			 1, -1, -1,
-			 1,  1, -1,
-			-1,  1, -1,
-			-1, -1, -1,
-			-1, -1,  1,
-			-1,  1,  1,
-			-1,  1, -1,
-			-1,  1,  1,
-			 1,  1,  1,
-			 1,  1, -1,
-			 1,  1,  1,
-			 1, -1,  1,
-			-1, -1,  1,
-			 1, -1,  1,
-			 1, -1, -1,
-		].map(a => a * 2.5))
-    const indices = new Uint16Array([...new Array(16).fill(0).map((_, i) => i)])
+    const vertexData = new Float32Array([
+			-1,  1,
+			-1, -1,
+			 1, -1,
+			 1,  1,
+		])
+    // prettier-ignore
+    const indices = new Uint16Array([
+			3, 2, 1,
+			3, 1, 0
+    ])
 
     this.vertexBuffer = renderer.device.createBuffer({
-      size: vertices.byteLength,
+      size: vertexData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      label: 'box outline vertex buffer',
+      label: 'particles vertex buffer',
       mappedAtCreation: true,
     })
-    new Float32Array(this.vertexBuffer.getMappedRange()).set(vertices)
+    new Float32Array(this.vertexBuffer.getMappedRange()).set(vertexData)
     this.vertexBuffer.unmap()
 
     this.indexBuffer = renderer.device.createBuffer({
       size: indices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-      label: 'box outline index buffer',
+      label: 'particles index buffer',
       mappedAtCreation: true,
     })
     new Uint16Array(this.indexBuffer.getMappedRange()).set(indices)
     this.indexBuffer.unmap()
+
+    this.bindGroupLayout = renderer.device.createBindGroupLayout({
+      label: 'particles bind group layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.COMPUTE,
+          buffer: {
+            type: 'read-only-storage',
+          },
+        },
+      ],
+    })
+    this.bindGroup = renderer.device.createBindGroup({
+      label: 'particles bind group',
+      layout: this.bindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.lightsBuffer,
+          },
+        },
+      ],
+    })
 
     this.init()
   }
 
   async init() {
     this.renderPipeline = await this.renderer.device.createRenderPipelineAsync({
-      label: 'box outline render pipeline',
+      label: 'particles render pipeline',
       layout: this.renderer.device.createPipelineLayout({
-        label: 'box outline render pipeline layout',
-        bindGroupLayouts: [this.renderer.bindGroupsLayouts.frame],
+        label: 'particles render pipeline layout',
+        bindGroupLayouts: [
+          this.renderer.bindGroupsLayouts.frame,
+          this.bindGroupLayout,
+        ],
       }),
       primitive: {
-        topology: 'line-strip',
+        topology: 'triangle-strip',
         stripIndexFormat: 'uint16',
       },
       depthStencil: {
@@ -74,24 +102,24 @@ export class BoxOutline {
         entryPoint: 'main',
         buffers: [
           {
-            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
               {
                 shaderLocation: 0,
-                format: 'float32x3',
+                format: 'float32x2',
                 offset: 0,
               },
             ],
           },
         ],
         module: this.renderer.device.createShaderModule({
-          code: BoxOutlineVertexShader,
+          code: ParticlesVertexShader,
         }),
       },
       fragment: {
         entryPoint: 'main',
         module: this.renderer.device.createShaderModule({
-          code: BoxOutlineFragmentShader,
+          code: ParticlesFragmentShader,
         }),
         targets: [
           // normal + material id
@@ -111,8 +139,11 @@ export class BoxOutline {
     }
     renderPass.setPipeline(this.renderPipeline)
     renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
+    renderPass.setBindGroup(1, this.bindGroup)
+
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
-    renderPass.drawIndexed(16)
+
+    renderPass.drawIndexed(6, this.instanceCount)
   }
 }

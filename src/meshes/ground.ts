@@ -161,9 +161,8 @@ export class Ground {
           code: GroundFragmentShader,
         }),
         targets: [
-          { format: 'rgba32float' },
-          // normal
-          { format: 'rgba32float' },
+          // normal + material id
+          { format: 'rgba16float' },
           // albedo
           {
             format: 'bgra8unorm',

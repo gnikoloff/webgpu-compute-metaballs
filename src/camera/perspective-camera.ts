@@ -6,22 +6,19 @@ export class PerspectiveCamera {
   public position: [number, number, number] = [0, 0, 0]
   public lookAtPosition: [number, number, number] = [0, 0, 0]
 
-  public projectionMatrix: mat4 = mat4.create()
-  public viewMatrix: mat4 = mat4.create()
+  public projectionMatrix = mat4.create()
+  public projectionInvMatrix = mat4.create()
+  public viewMatrix = mat4.create()
+  public viewInvMatrix = mat4.create()
 
   public zoom = 1
 
-  public fieldOfView: number
-  public aspect: number
-  public near: number
-  public far: number
-
-  constructor(fieldOfView: number, aspect: number, near: number, far: number) {
-    this.fieldOfView = fieldOfView
-    this.aspect = aspect
-    this.near = near
-    this.far = far
-
+  constructor(
+    public fieldOfView: number,
+    public aspect: number,
+    public near: number,
+    public far: number,
+  ) {
     this.updateProjectionMatrix()
   }
 
@@ -41,6 +38,7 @@ export class PerspectiveCamera {
       this.lookAtPosition,
       PerspectiveCamera.UP_VECTOR,
     )
+    mat4.invert(this.viewInvMatrix, this.viewMatrix)
     return this
   }
 
@@ -52,6 +50,7 @@ export class PerspectiveCamera {
       this.near,
       this.far,
     )
+    mat4.invert(this.projectionInvMatrix, this.projectionMatrix)
     return this
   }
 
