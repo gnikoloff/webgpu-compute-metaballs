@@ -1,13 +1,15 @@
-import { ProjectionUniforms, ViewUniforms } from './shared-chunks'
+import { ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
 
 export const GroundVertexShader = `
-	${ProjectionUniforms}
-	${ViewUniforms}
+	${ProjectionUniformsStruct}
+	${ViewUniformsStruct}
 
 	struct ModelUniforms {
 		matrix: mat4x4<f32>,
 	}
 
+	@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
+	@group(0) @binding(1) var<uniform> view: ViewUniformsStruct;
 	@group(1) @binding(0) var<uniform> model: ModelUniforms;
 
 	struct Inputs {

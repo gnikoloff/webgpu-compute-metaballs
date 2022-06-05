@@ -76,7 +76,8 @@ export class WebGPURenderer {
     const viewUBOByteLength =
       16 * Float32Array.BYTES_PER_ELEMENT + // matrix
       4 * Float32Array.BYTES_PER_ELEMENT + // camera position
-      1 * Float32Array.BYTES_PER_ELEMENT // time
+      1 * Float32Array.BYTES_PER_ELEMENT + // time
+      1 * Float32Array.BYTES_PER_ELEMENT // delta time
 
     this.ubos.viewUBO = this.device.createBuffer({
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -141,12 +142,18 @@ export class WebGPURenderer {
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          visibility:
+            GPUShaderStage.VERTEX |
+            GPUShaderStage.FRAGMENT |
+            GPUShaderStage.COMPUTE,
           buffer: {},
         },
         {
           binding: 1,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          visibility:
+            GPUShaderStage.VERTEX |
+            GPUShaderStage.FRAGMENT |
+            GPUShaderStage.COMPUTE,
           buffer: {},
         },
       ],

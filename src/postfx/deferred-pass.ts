@@ -1,11 +1,20 @@
 import { WebGPURenderer } from '../webgpu-renderer'
 import { Effect } from './effect'
+import { PointLightsCompute } from '../compute/point-lights'
 import { DeferredPassFragmentShader } from '../shaders/deferred-pass'
 
 export class DeferredPass extends Effect {
+  private pointLightsCompute: PointLightsCompute
+
   public framebufferDescriptor: GPURenderPassDescriptor
 
+  public get isReady(): boolean {
+    return this.pointLightsCompute.isReady && !!this.renderPipeline
+  }
+
   constructor(renderer: WebGPURenderer) {
+    const pointLightsCompute = new PointLightsCompute(renderer)
+
     const gBufferTexturePos = renderer.device.createTexture({
       label: 'gbuffer position texture',
       size: [...renderer.outputSize, 1],
@@ -29,18 +38,20 @@ export class DeferredPass extends Effect {
     })
 
     const bindGroupLayout = renderer.device.createBindGroupLayout({
-      label: 'gbuffer textures bind group layout',
+      label: 'gbuffer bind group layout',
       entries: [
         {
           binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: {},
+          visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+          buffer: {
+            type: 'read-only-storage',
+          },
         },
         {
           binding: 1,
-          visibility: GPUShaderStage.FRAGMENT,
-          texture: {
-            sampleType: 'unfilterable-float',
+          visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.COMPUTE,
+          buffer: {
+            type: 'uniform',
           },
         },
         {
@@ -52,6 +63,13 @@ export class DeferredPass extends Effect {
         },
         {
           binding: 3,
+          visibility: GPUShaderStage.FRAGMENT,
+          texture: {
+            sampleType: 'unfilterable-float',
+          },
+        },
+        {
+          binding: 4,
           visibility: GPUShaderStage.FRAGMENT,
           texture: {},
         },
@@ -59,25 +77,31 @@ export class DeferredPass extends Effect {
     })
 
     const bindGroup = renderer.device.createBindGroup({
-      label: 'gbuffer textures bind group',
+      label: 'gbuffer bind group',
       layout: bindGroupLayout,
       entries: [
         {
           binding: 0,
           resource: {
-            buffer: renderer.ubos.viewUBO,
+            buffer: pointLightsCompute.lightsBuffer,
           },
         },
         {
           binding: 1,
-          resource: gBufferTexturePos.createView(),
+          resource: {
+            buffer: pointLightsCompute.lightsConfigUniformBuffer,
+          },
         },
         {
           binding: 2,
-          resource: gBufferTextureNormal.createView(),
+          resource: gBufferTexturePos.createView(),
         },
         {
           binding: 3,
+          resource: gBufferTextureNormal.createView(),
+        },
+        {
+          binding: 4,
           resource: gbufferTextureDiffuse.createView(),
         },
       ],
@@ -85,8 +109,8 @@ export class DeferredPass extends Effect {
 
     super(renderer, {
       fragmentShader: DeferredPassFragmentShader,
-      bindGroupLayouts: [bindGroupLayout],
-      bindGroups: [bindGroup],
+      bindGroupLayouts: [bindGroupLayout, renderer.bindGroupsLayouts.frame],
+      bindGroups: [bindGroup, renderer.bindGroups.frame],
     })
 
     this.framebufferDescriptor = {
@@ -117,13 +141,20 @@ export class DeferredPass extends Effect {
         depthStoreOp: 'store',
       },
     }
+
+    this.pointLightsCompute = pointLightsCompute
+  }
+
+  updateLightsSim(computePass: GPUComputePassEncoder) {
+    this.pointLightsCompute.updateSim(computePass)
   }
 
   public render(renderPass: GPURenderPassEncoder): void {
-    if (!this.renderPipeline) {
+    if (!this.isReady) {
       return
     }
     this.preRender(renderPass)
+    renderPass.setBindGroup(1, this.renderer.bindGroups.frame)
     renderPass.drawIndexed(6)
   }
 }

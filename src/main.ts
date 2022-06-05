@@ -1,7 +1,7 @@
 import { IVolumeSettings } from './protocol'
 import { WebGPURenderer } from './webgpu-renderer'
-import { PerspectiveCamera } from './lib/camera/perspective-camera'
-import { CameraController } from './lib/camera/camera-controller'
+import { PerspectiveCamera } from './camera/perspective-camera'
+import { CameraController } from './camera/camera-controller'
 import { DeferredPass } from './postfx/deferred-pass'
 
 import { Metaballs } from './meshes/metaballs'
@@ -81,11 +81,6 @@ import { Ground } from './meshes/ground'
     16 * Float32Array.BYTES_PER_ELEMENT,
     new Float32Array(perspCamera.position),
   )
-  renderer.device.queue.writeBuffer(
-    renderer.ubos.viewUBO,
-    16 * Float32Array.BYTES_PER_ELEMENT + 4 * Float32Array.BYTES_PER_ELEMENT,
-    new Float32Array([0]),
-  )
 
   const volume: IVolumeSettings = {
     xMin: -3,
@@ -144,8 +139,13 @@ import { Ground } from './meshes/ground'
     )
     renderer.device.queue.writeBuffer(
       renderer.ubos.viewUBO,
+      16 * Float32Array.BYTES_PER_ELEMENT + 3 * Float32Array.BYTES_PER_ELEMENT,
+      new Float32Array([time]),
+    )
+    renderer.device.queue.writeBuffer(
+      renderer.ubos.viewUBO,
       16 * Float32Array.BYTES_PER_ELEMENT + 4 * Float32Array.BYTES_PER_ELEMENT,
-      new Float32Array([0]),
+      new Float32Array([dt]),
     )
 
     // renderer.device.queue.writeBuffer(
@@ -158,7 +158,10 @@ import { Ground } from './meshes/ground'
     const commandEncoder = renderer.device.createCommandEncoder()
 
     const computePass = commandEncoder.beginComputePass()
+
     metaballs.updateSim(computePass, time, dt)
+    deferredPass.updateLightsSim(computePass)
+
     computePass.end()
 
     // const shadowRenderPass = commandEncoder.beginRenderPass({

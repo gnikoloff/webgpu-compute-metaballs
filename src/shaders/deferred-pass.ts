@@ -10,17 +10,26 @@ import {
   ReinhardTonemapping,
   SurfaceShaderStruct,
 } from './pbr-chunks'
+import { PointLightConfigStruct, InputPointLightStructs } from './shared-chunks'
 
 export const DeferredPassFragmentShader = `
+	${InputPointLightStructs}
+	${PointLightConfigStruct}
+	${PointLightStruct}
+	${DirectionalLightStruct}
+	${SurfaceShaderStruct}
 
 	struct View {
 		position: vec3<f32>,
 	}
 
-	@group(0) @binding(0) var<uniform> view: View;
-	@group(0) @binding(1) var positionTexture: texture_2d<f32>;
-	@group(0) @binding(2) var normalTexture: texture_2d<f32>;
-	@group(0) @binding(3) var diffuseTexture: texture_2d<f32>;
+	@group(0) @binding(0) var<storage, read> lightsBuffer: LightsBuffer;
+	@group(0) @binding(1) var<uniform> lightsConfig: LightsConfig;
+	@group(0) @binding(2) var positionTexture: texture_2d<f32>;
+	@group(0) @binding(3) var normalTexture: texture_2d<f32>;
+	@group(0) @binding(4) var diffuseTexture: texture_2d<f32>;
+
+	@group(1) @binding(0) var<uniform> view: View;
 
 	struct Inputs {
 		@builtin(position) coords: vec4<f32>,
@@ -33,9 +42,6 @@ export const DeferredPassFragmentShader = `
 	let PI = ${Math.PI};
 	let LOG2 = ${Math.LOG2E};
 	
-	${PointLightStruct}
-	${DirectionalLightStruct}
-	${SurfaceShaderStruct}
 	${DistributionGGX}
 	${GeometrySmith}
 	${FresnelSchlick}
@@ -102,71 +108,42 @@ export const DeferredPassFragmentShader = `
 
 		var output: Output;
 
+		
+
 		if (surface.materialID == 0.0) {
-			let pointLightPos = vec3(2.6, 2.5, 0.0);
+			// output luminance to add to
+			var Lo = vec3(0.0);
 
-			var pointLight: PointLight;
-			pointLight.pointToLight = pointLightPos - worldPosition;
-			pointLight.color = vec3(1.0, 0.0, 0.0);
-			pointLight.range = 2.0;
-			pointLight.intensity = 3.0;
-
-			var pointLight2: PointLight;
-			pointLight2.pointToLight = vec3(12.8, 2.5, -0.0) - worldPosition;
-			pointLight2.color = vec3(1.0, 0.0, 0.0);
-			pointLight2.range = 20.0;
-			pointLight2.intensity = 3.0;
-
-			var pointLight3: PointLight;
-			pointLight3.pointToLight = vec3(2.6, 2.5, 0.0) - worldPosition;
-			pointLight3.color = vec3(1.0, 0.0, 0.0);
-			pointLight3.range = 20.0;
-			pointLight3.intensity = 3.0;
-
-			var pointLight4: PointLight;
-			pointLight4.pointToLight = vec3(-2.8, 2.5, 0.0) - worldPosition;
-			pointLight4.color = vec3(1.0, 0.0, 0.0);
-			pointLight4.range = 20.0;
-			pointLight4.intensity = 3.0;
-
-			var pointLight5: PointLight;
-			pointLight5.pointToLight = vec3(2.0, 0.6, 0.0) - worldPosition;
-			pointLight5.color = vec3(1.0);
-			pointLight5.range = 10.0;
-			pointLight5.intensity = 4.0;
+			for (var i : u32 = 0u; i < lightsConfig.numLights; i = i + 1u) {
+    		let light = lightsBuffer.lights[i];
+				var pointLight: PointLight;
+				pointLight.pointToLight = light.position.xyz - worldPosition;
+				pointLight.color = light.color;
+				pointLight.range = light.range;
+				pointLight.intensity = 9.0;
+				Lo = Lo + PointLightRadiance(pointLight, surface);
+			}
 
 			var dirLight: DirectionalLight;
 			dirLight.direction = vec3(2.0, 20.0, 0.0);
 			dirLight.color = vec3(1.0);
-
-			// output luminance to add to
-			var Lo = vec3(0.0);
-			Lo = Lo + PointLightRadiance(pointLight, surface);
-			Lo = Lo + PointLightRadiance(pointLight2, surface);
-			Lo = Lo + PointLightRadiance(pointLight3, surface);
-			Lo = Lo + PointLightRadiance(pointLight4, surface);
-			Lo = Lo + PointLightRadiance(pointLight5, surface);
-			Lo = Lo + DirectionalLightRadiance(dirLight, surface);
+			// Lo = Lo + DirectionalLightRadiance(dirLight, surface);
 
 			let ambient = vec3(0.01) * albedo.rgb;
 
-			// // let color = (ambient + Lo);
 			let color = linearTosRGB(ambient + Lo);
 				
-			// output.Color = vec4(color.rgb, albedo.a);
-			output.color = vec4(color.rgb, 1.0);
-			
+			output.color = vec4(color.rgb, 1.0);			
 
 			let fogDensity = 0.085;
 			let fogDistance = length(worldPosition.xyz);
 			var fogAmount = 1.0 - exp2(-fogDensity * fogDensity * fogDistance * fogDistance * LOG2);
 			fogAmount = clamp(fogAmount, 0.0, 1.0);
-
 			let fogColor = vec4(0.1, 0.1, 0.1, 1.0);
 			output.color = mix(output.color, fogColor, fogAmount);
 
 		} else if (surface.materialID == 0.1) {
-			output.color = vec4(1.0);
+			output.color = vec4(albedo.rgb, 1.0);
 			
 		} else {
 			output.color = vec4(0.1, 0.1, 0.1, 1.0);

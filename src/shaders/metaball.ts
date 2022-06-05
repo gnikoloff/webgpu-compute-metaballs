@@ -3,7 +3,7 @@ import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
 } from '../geometry-helper-data'
-import { ProjectionUniforms, ViewUniforms } from './shared-chunks'
+import { ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
 
 export const IsosurfaceVolume = `
   struct IsosurfaceVolume {
@@ -255,8 +255,11 @@ export const MarchingCubesComputeSource = `
 `
 
 export const MetaballsVertexShader = `
-    ${ProjectionUniforms}
-    ${ViewUniforms}
+    ${ProjectionUniformsStruct}
+    ${ViewUniformsStruct}
+
+		@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
+		@group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
 
     struct Inputs {
       @location(0) position: vec3<f32>,
