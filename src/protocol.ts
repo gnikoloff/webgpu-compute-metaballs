@@ -1,3 +1,5 @@
+import { vec3 } from 'gl-matrix'
+
 export interface IVolumeSettings {
   xMin: number
   yMin: number
@@ -25,4 +27,13 @@ export interface IScreenEffect {
   fragmentShader: string
   bindGroupLayouts?: GPUBindGroupLayout[]
   bindGroups?: GPUBindGroup[]
+}
+
+export interface ISpotLight {
+  position: vec3
+  direction?: vec3
+  color?: vec3
+  cutOff?: number
+  outerCutOff?: number
+  intensity?: number
 }

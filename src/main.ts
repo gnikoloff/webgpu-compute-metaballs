@@ -118,7 +118,7 @@ import { Particles } from './meshes/particles'
   const ground = new Ground(renderer)
   const particles = new Particles(
     renderer,
-    deferredPass.pointLightsCompute.lightsBuffer,
+    deferredPass.pointLights.lightsBuffer,
   )
 
   // const gridHelper = new HelperGrid(renderer)
@@ -187,7 +187,7 @@ import { Particles } from './meshes/particles'
     const computePass = commandEncoder.beginComputePass()
 
     metaballs.updateSim(computePass, time, dt)
-    deferredPass.updateLightsSim(computePass)
+    deferredPass.updateLightsSim(computePass, time)
 
     computePass.end()
 

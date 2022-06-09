@@ -127,15 +127,6 @@ export class WebGPURenderer {
       usage:
         GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
     })
-    this.textures.gBufferDepthTexture = this.device.createTexture({
-      size: {
-        width: this.outputSize[0],
-        height: this.outputSize[1],
-      },
-      format: 'depth24plus',
-      usage:
-        GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-    })
 
     this.depthAndStencilAttachment = {
       view: this.textures.depthTexture.createView(),

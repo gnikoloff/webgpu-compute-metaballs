@@ -2,8 +2,8 @@ import { vec4 } from 'gl-matrix'
 import { UpdatePointLightsComputeShader } from '../shaders/point-lights-compute'
 import { WebGPURenderer } from '../webgpu-renderer'
 
-export class PointLightsCompute {
-  public static readonly MAX_LIGHTS_COUNT = 50
+export class PointLights {
+  public static readonly MAX_LIGHTS_COUNT = 24
 
   private lightsBufferComputeBindGroupLayout: GPUBindGroupLayout
   private lightsBufferComputeBindGroup: GPUBindGroup
@@ -20,7 +20,7 @@ export class PointLightsCompute {
     const lightsDataStride = 16
     const lightsBufferByteSize =
       lightsDataStride *
-      PointLightsCompute.MAX_LIGHTS_COUNT *
+      PointLights.MAX_LIGHTS_COUNT *
       Float32Array.BYTES_PER_ELEMENT
     this.lightsBuffer = renderer.device.createBuffer({
       size: lightsBufferByteSize,
@@ -30,7 +30,7 @@ export class PointLightsCompute {
 
     const lightsData = new Float32Array(this.lightsBuffer.getMappedRange())
     const tmpVec4 = vec4.create()
-    for (let i = 0; i < PointLightsCompute.MAX_LIGHTS_COUNT; i++) {
+    for (let i = 0; i < PointLights.MAX_LIGHTS_COUNT; i++) {
       const offset = lightsDataStride * i
 
       const x = (Math.random() * 2 - 1) * 20
@@ -46,8 +46,7 @@ export class PointLightsCompute {
       const b = Math.random()
 
       const radius = 20
-      const intensity =
-        Math.random() > 0.8 ? Math.random() * 10 + 4 : Math.random() * 25 + 5
+      const intensity = 10 + Math.random() * 12
 
       // position
       tmpVec4[0] = x
@@ -79,7 +78,7 @@ export class PointLightsCompute {
     const lightsConfigArr = new Uint32Array(
       this.lightsConfigUniformBuffer.getMappedRange(),
     )
-    lightsConfigArr[0] = PointLightsCompute.MAX_LIGHTS_COUNT
+    lightsConfigArr[0] = PointLights.MAX_LIGHTS_COUNT
     this.lightsConfigUniformBuffer.unmap()
 
     this.lightsBufferComputeBindGroupLayout =
@@ -148,9 +147,7 @@ export class PointLightsCompute {
     computePass.setPipeline(this.updateComputePipeline)
     computePass.setBindGroup(0, this.lightsBufferComputeBindGroup)
     computePass.setBindGroup(1, this.renderer.bindGroups.frame)
-    computePass.dispatchWorkgroups(
-      Math.ceil(PointLightsCompute.MAX_LIGHTS_COUNT / 64),
-    )
+    computePass.dispatchWorkgroups(Math.ceil(PointLights.MAX_LIGHTS_COUNT / 64))
     return this
   }
 }

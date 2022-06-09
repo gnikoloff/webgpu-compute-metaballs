@@ -1,4 +1,4 @@
-import { PointLightsCompute } from '../compute/point-lights'
+import { PointLights } from '../lighting/point-lights'
 import { DEPTH_FORMAT } from '../constants'
 import {
   ParticlesFragmentShader,
@@ -14,7 +14,7 @@ export class Particles {
   private bindGroupLayout: GPUBindGroupLayout
   private bindGroup: GPUBindGroup
 
-  private instanceCount = PointLightsCompute.MAX_LIGHTS_COUNT
+  private instanceCount = PointLights.MAX_LIGHTS_COUNT
 
   constructor(
     private renderer: WebGPURenderer,

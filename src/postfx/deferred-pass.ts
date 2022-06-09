@@ -1,18 +1,39 @@
 import { WebGPURenderer } from '../webgpu-renderer'
 import { Effect } from './effect'
-import { PointLightsCompute } from '../compute/point-lights'
+import { PointLights } from '../lighting/point-lights'
+import { SpotLights } from '../lighting/spot-lights'
 import { DeferredPassFragmentShader } from '../shaders/deferred-pass'
+import { vec3 } from 'gl-matrix'
+import { deg2Rad } from '../math/deg-to-rad'
 
 export class DeferredPass extends Effect {
-  public pointLightsCompute: PointLightsCompute
+  public pointLights: PointLights
+  public spotLights: SpotLights
   public framebufferDescriptor: GPURenderPassDescriptor
 
   public get isReady(): boolean {
-    return this.pointLightsCompute.isReady && !!this.renderPipeline
+    return this.pointLights.isReady && !!this.renderPipeline
   }
 
   constructor(renderer: WebGPURenderer) {
-    const pointLightsCompute = new PointLightsCompute(renderer)
+    const pointLights = new PointLights(renderer)
+    const spotLights = new SpotLights(renderer)
+      .add({
+        position: vec3.fromValues(0, 20, 0),
+        direction: vec3.fromValues(0.0, 0.1, 0),
+        color: vec3.fromValues(1, 0, 0),
+        cutOff: deg2Rad(2),
+        outerCutOff: deg2Rad(24),
+        intensity: 20,
+      })
+      .add({
+        position: vec3.fromValues(0, 20, 0),
+        direction: vec3.fromValues(0, 1, 0),
+        color: vec3.fromValues(0, 0, 1),
+        cutOff: deg2Rad(2),
+        outerCutOff: deg2Rad(3),
+      })
+      .init()
 
     const gBufferTextureNormal = renderer.device.createTexture({
       label: 'gbuffer normal texture',
@@ -75,13 +96,13 @@ export class DeferredPass extends Effect {
         {
           binding: 0,
           resource: {
-            buffer: pointLightsCompute.lightsBuffer,
+            buffer: pointLights.lightsBuffer,
           },
         },
         {
           binding: 1,
           resource: {
-            buffer: pointLightsCompute.lightsConfigUniformBuffer,
+            buffer: pointLights.lightsConfigUniformBuffer,
           },
         },
         {
@@ -94,15 +115,19 @@ export class DeferredPass extends Effect {
         },
         {
           binding: 4,
-          resource: renderer.textures.gBufferDepthTexture.createView(),
+          resource: renderer.textures.depthTexture.createView(),
         },
       ],
     })
 
     super(renderer, {
       fragmentShader: DeferredPassFragmentShader,
-      bindGroupLayouts: [bindGroupLayout, renderer.bindGroupsLayouts.frame],
-      bindGroups: [bindGroup, renderer.bindGroups.frame],
+      bindGroupLayouts: [
+        bindGroupLayout,
+        renderer.bindGroupsLayouts.frame,
+        spotLights.bindGroupLayout,
+      ],
+      bindGroups: [bindGroup, renderer.bindGroups.frame, spotLights.bindGroup],
     })
 
     this.framebufferDescriptor = {
@@ -121,24 +146,45 @@ export class DeferredPass extends Effect {
         },
       ],
       depthStencilAttachment: {
-        view: renderer.textures.gBufferDepthTexture.createView(),
+        view: renderer.textures.depthTexture.createView(),
         depthLoadOp: 'clear',
         depthClearValue: 1,
         depthStoreOp: 'store',
       },
     }
 
-    this.pointLightsCompute = pointLightsCompute
+    this.pointLights = pointLights
+    this.spotLights = spotLights
   }
 
-  updateLightsSim(computePass: GPUComputePassEncoder) {
-    this.pointLightsCompute.updateSim(computePass)
+  updateLightsSim(
+    computePass: GPUComputePassEncoder,
+    time: DOMHighResTimeStamp,
+  ) {
+    this.pointLights.updateSim(computePass)
+
+    this.spotLights.get(0).position = vec3.fromValues(
+      Math.cos(time) * 10,
+      11,
+      Math.sin(time) * 10,
+    )
+    this.spotLights.get(0).direction = vec3.fromValues(
+      Math.cos(time) * 0.3,
+      0.1,
+      Math.sin(time) * 0.3,
+    )
+    this.spotLights.get(1).position = vec3.fromValues(
+      Math.cos(time + Math.PI) * 4,
+      20,
+      Math.sin(time + Math.PI) * 4,
+    )
   }
 
   public render(renderPass: GPURenderPassEncoder): void {
     if (!this.isReady) {
       return
     }
+
     this.preRender(renderPass)
     renderPass.setBindGroup(1, this.renderer.bindGroups.frame)
     renderPass.drawIndexed(6)
