@@ -50,7 +50,7 @@ export const MetaballFieldComputeSource = `
     return result;
   }
 
-  @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
+  @compute @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let position = positionAt(global_id);
     let valueIndex = global_id.x +
@@ -166,7 +166,7 @@ export const MarchingCubesComputeSource = `
     cubeVerts = cubeVerts + 1u;
   }
 
-  @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
+  @compute @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     
     let i0 = global_id;
@@ -271,7 +271,7 @@ export const MetaballsVertexShader = `
       @builtin(position) position: vec4<f32>,
     }
 
-    @stage(vertex)
+    @vertex
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *
@@ -291,13 +291,39 @@ export const MetaballsFragmentShader = `
 			@location(0) normalMaterialID: vec4<f32>,	
 			@location(1) albedo: vec4<f32>,	
 		}
-    @stage(fragment)
+    @fragment
     fn main(input: Inputs) -> Output {
 			let materialID = 0.0;
 			var normal = normalize(input.normal);
       var output: Output;
 			output.normalMaterialID = vec4(normal, materialID);
-			output.albedo = vec4(1.0, 1.0, 0.0, 1.0);
+			output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
 			return output;
+    }
+`
+
+export const MetaballsShadowVertexShader = `
+    ${ProjectionUniformsStruct}
+    ${ViewUniformsStruct}
+
+		@group(0) @binding(0) var<uniform> projection: ProjectionUniformsStruct;
+		@group(0) @binding(1) var<uniform> view: ViewUniformsStruct;
+
+    struct Inputs {
+      @location(0) position: vec3<f32>,
+    }
+    
+    struct Output {
+      @builtin(position) position: vec4<f32>,
+    }
+
+    @vertex
+    fn main(input: Inputs) -> Output {
+      var output: Output;
+      output.position = projection.matrix *
+                        view.matrix *
+                        vec4(input.position, 1.0);
+
+      return output;
     }
 `

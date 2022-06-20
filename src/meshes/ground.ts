@@ -1,7 +1,12 @@
 import { mat4 } from 'gl-matrix'
 import { DEPTH_FORMAT } from '../constants'
 import { BoxIndices, BoxInterleavedData } from '../geometry-helper-data'
-import { GroundFragmentShader, GroundVertexShader } from '../shaders/ground'
+import { SpotLights } from '../lighting/spot-lights'
+import {
+  GroundFragmentShader,
+  GroundShadowVertexShader,
+  GroundVertexShader,
+} from '../shaders/ground'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class Ground {
@@ -12,6 +17,7 @@ export class Ground {
   private static readonly SPACING = 0
 
   private renderPipeline: GPURenderPipeline
+  private renderShadowPipeline: GPURenderPipeline
   private modelBindGroupLayout: GPUBindGroupLayout
   private modelBindGroup: GPUBindGroup
   private vertexBuffer: GPUBuffer
@@ -22,7 +28,10 @@ export class Ground {
   private instanceCount = 0
   private readonly modelMatrix = mat4.create()
 
-  constructor(private renderer: WebGPURenderer) {
+  constructor(
+    private renderer: WebGPURenderer,
+    private spotLights: SpotLights,
+  ) {
     this.vertexBuffer = renderer.device.createBuffer({
       size: BoxInterleavedData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -170,6 +179,73 @@ export class Ground {
         ],
       },
     })
+
+    this.renderShadowPipeline =
+      await this.renderer.device.createRenderPipelineAsync({
+        label: 'ground shadow rendering pipeline',
+        layout: this.renderer.device.createPipelineLayout({
+          label: 'ground shadow rendering pipeline layout',
+          bindGroupLayouts: [
+            this.spotLights.bindGroupLayouts.cameraProjections,
+            this.modelBindGroupLayout,
+          ],
+        }),
+        vertex: {
+          entryPoint: 'main',
+          buffers: [
+            {
+              arrayStride: 6 * Float32Array.BYTES_PER_ELEMENT,
+              attributes: [
+                {
+                  shaderLocation: 0,
+                  format: 'float32x3',
+                  offset: 0,
+                },
+              ],
+            },
+            {
+              arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+              stepMode: 'instance',
+              attributes: [
+                {
+                  shaderLocation: 1,
+                  format: 'float32x3',
+                  offset: 0,
+                },
+              ],
+            },
+          ],
+          module: this.renderer.device.createShaderModule({
+            code: GroundShadowVertexShader,
+          }),
+        },
+        depthStencil: {
+          depthWriteEnabled: true,
+          depthCompare: 'less',
+          format: 'depth32float',
+        },
+        primitive: {
+          topology: 'triangle-strip',
+          stripIndexFormat: 'uint16',
+        },
+        multisample: {
+          count: 1,
+        },
+      })
+  }
+
+  public renderShadow(renderPass: GPURenderPassEncoder): this {
+    if (!this.renderShadowPipeline) {
+      return this
+    }
+    renderPass.setPipeline(this.renderShadowPipeline)
+    renderPass.setBindGroup(0, this.spotLights.bindGroups.spotLight0Camera)
+    renderPass.setBindGroup(1, this.modelBindGroup)
+    renderPass.setVertexBuffer(0, this.vertexBuffer)
+    renderPass.setVertexBuffer(1, this.instanceBuffer)
+    renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
+    renderPass.drawIndexed(36, this.instanceCount)
+    return this
   }
 
   public render(renderPass: GPURenderPassEncoder): void {

@@ -35,9 +35,16 @@ export const DeferredPassFragmentShader = `
 
 	@group(1) @binding(0) var<uniform> projection: ProjectionUniformsStruct;
 	@group(1) @binding(1) var<uniform> view: ViewUniformsStruct;
+	@group(1) @binding(2) var depthSampler: sampler;
 
 	@group(2) @binding(0) var<uniform> spotLight0: SpotLight;
 	@group(2) @binding(1) var<uniform> spotLight1: SpotLight;
+	@group(2) @binding(2) var spotLight0DepthTexture: texture_depth_2d;
+
+	@group(3) @binding(0) var<uniform> spotLight0Projection: ProjectionUniformsStruct;
+	@group(3) @binding(1) var<uniform> spotLight0View: ViewUniformsStruct;
+
+
 
 	struct Inputs {
 		@builtin(position) coords: vec4<f32>,
@@ -81,44 +88,43 @@ export const DeferredPassFragmentShader = `
 			0
 		);
 
-		// // Shadow mapping
-		// let posFromLight = shadowprojectionuniforms.matrix * shadowviewuniforms.matrix * vec4(worldPosition, 1.0);
-		// var shadowPos = posFromLight.xyz / posFromLight.w;
-		// shadowPos = shadowPos * vec3(0.5, -0.5, 1.0) + vec3(0.5, 0.5, 0.0);
-
-		// // Percentage close filtering
-		// var visibility : f32 = 0.0;
-		// let oneOverShadowDepthTextureSize = 1.0 / ${SHADOW_MAP_SIZE}.0;
-		// for (var y : i32 = -1 ; y <= 1 ; y = y + 1) {
-		// 	for (var x : i32 = -1 ; x <= 1 ; x = x + 1) {
-		// 		let offset : vec2<f32> = vec2<f32>(
-		// 			f32(x) * oneOverShadowDepthTextureSize,
-		// 			f32(y) * oneOverShadowDepthTextureSize
-		// 		);
-		// 		visibility = visibility + textureSampleCompare(
-		// 			shadowDepthTexture,
-		// 			depthSampler,
-		// 			shadowPos.xy + offset,
-		// 			shadowPos.z - 0.007
-		// 		);
-		// 	}
-		// }
-		// visibility = visibility / 9.0;
-
-		// PBR
-
 		var surface: Surface;
-		surface.albedo = albedo;
-		surface.metallic = 0.0;
-		surface.N = normalMaterialID.xyz;
-		surface.roughness = 0.0;
 		surface.materialID = normalMaterialID.w;
-		surface.F0 = mix(vec3(0.04), albedo.rgb, vec3(surface.metallic));
-		surface.V = normalize(view.position - worldPosition.xyz);
 
 		var output: Output;
 
+		// Shadow mapping
+		var posFromLight = spotLight0Projection.matrix * spotLight0View.matrix * vec4(worldPosition.xyz, 1.0);
+		posFromLight = vec4(posFromLight.xyz / posFromLight.w, 1.0);
+		var shadowPos = vec3(
+			posFromLight.xy * vec2(0.5,-0.5) + vec2(0.5, 0.5),
+			posFromLight.z
+		);
+
+		let projectedDepth = textureSample(spotLight0DepthTexture, depthSampler, shadowPos.xy);
+
 		if (surface.materialID == 0.0) {
+			
+			let inRange =
+				shadowPos.x >= 0.0 &&
+				shadowPos.x <= 1.0 &&
+				shadowPos.y >= 0.0 &&
+				shadowPos.y <= 1.0;
+
+			var visibility = 1.0;
+			if (inRange && projectedDepth <= posFromLight.z - 0.000006) {
+				visibility = 0.0;
+			}
+
+			// PBR
+
+			surface.albedo = albedo;
+			surface.metallic = 0.7;
+			surface.N = normalMaterialID.xyz;
+			surface.roughness = 0.4;
+			surface.F0 = mix(vec3(0.04), albedo.rgb, vec3(surface.metallic));
+			surface.V = normalize(view.position - worldPosition.xyz);
+
 			// output luminance to add to
 			var Lo = vec3(0.0);
 
@@ -139,25 +145,22 @@ export const DeferredPassFragmentShader = `
 			var dirLight: DirectionalLight;
 			dirLight.direction = vec3(2.0, 20.0, 0.0);
 			dirLight.color = vec3(0.1);
-			Lo += DirectionalLightRadiance(dirLight, surface);
+			Lo += DirectionalLightRadiance(dirLight, surface) * visibility;
 
 			// ## Spot lighting
-
+			var spotLight: SpotLight;
+			spotLight.position = vec3(cos(view.time) * 4.0, 80.0, sin(view.time) * 4.0);
+			spotLight.direction = vec3(0.0, 1.0, 0.0);
+			spotLight.color = vec3(0.8);
+			spotLight.cutOff = cos(2.0 * PI / 180.0);
+			spotLight.outerCutOff = cos(4.0 * PI / 180.0);
+			spotLight.intensity = 2.0;
 			Lo += SpotLightRadiance(
 				spotLight0,
 				spotLight0.position - worldPosition.xyz,
 				surface
-			);
-			Lo += SpotLightRadiance(
-				spotLight1,
-				spotLight1.position - worldPosition.xyz,
-				surface
-			);
+			) * visibility;
 
-			// Lo += SpotLightRadiance(spotLight1, surface);
-
-
-			// ## Lighting contribution
 
 			let ambient = vec3(0.01) * albedo.rgb;
 			let color = linearTosRGB(ambient + Lo);
@@ -171,18 +174,17 @@ export const DeferredPassFragmentShader = `
 			fogAmount = clamp(fogAmount, 0.0, 1.0);
 			let fogColor = vec4(0.1, 0.1, 0.1, 1.0);
 			output.color = mix(output.color, fogColor, fogAmount);
+			
+			// output.color = vec4(vec3(visibility), 1.0);
+			// output.color = vec4(shadowPos, 1.0);
+			// let ddd = textureLoad(spotLight0DepthTexture, vec2<i32>(floor(input.coords.xy)), 0);
+			// output.color = vec4(vec3(LinearizeDepth(ddd)), 1.0);
 
 		} else if (0.1 - surface.materialID < 0.01 && surface.materialID < 0.1) {
 			output.color = vec4(albedo.rgb, 1.0);
-			
 		} else {
 			output.color = vec4(0.1, 0.1, 0.1, 1.0);
 		}
-		
-		// output.color = vec4(worldPosition.xyz, 1.0);
-		// output.color = vec4(vec3(LinearizeDepth(depth)), 1.0);
 		return output;
-
-		
 	}
 `

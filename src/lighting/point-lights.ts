@@ -45,8 +45,8 @@ export class PointLights {
       const g = Math.random()
       const b = Math.random()
 
-      const radius = 20
-      const intensity = 10 + Math.random() * 12
+      const radius = 5 + Math.random() * 10
+      const intensity = 1 + Math.random() * 12
 
       // position
       tmpVec4[0] = x

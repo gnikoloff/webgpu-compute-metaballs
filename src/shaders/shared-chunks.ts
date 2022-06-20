@@ -81,8 +81,8 @@ export const SurfaceShaderStruct = `
 export const LinearizeDepthSnippet = `
 	fn LinearizeDepth(depth: f32) -> f32 {
 		let z = depth * 2.0 - 1.0; // Back to NDC 
-		let near_plane = 0.1;
-		let far_plane = 0.2;
+		let near_plane = 0.001;
+		let far_plane = 0.4;
 		return (2.0 * near_plane * far_plane) / (far_plane + near_plane - z * (far_plane - near_plane));
 	}
 `
@@ -96,7 +96,7 @@ export const EffectVertexShader = `
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		output.position = vec4(input.position, 0.0, 1.0);

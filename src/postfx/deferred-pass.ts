@@ -11,6 +11,8 @@ export class DeferredPass extends Effect {
   public spotLights: SpotLights
   public framebufferDescriptor: GPURenderPassDescriptor
 
+  private spotLightTarget = vec3.fromValues(0, 80, 0)
+
   public get isReady(): boolean {
     return this.pointLights.isReady && !!this.renderPipeline
   }
@@ -19,19 +21,19 @@ export class DeferredPass extends Effect {
     const pointLights = new PointLights(renderer)
     const spotLights = new SpotLights(renderer)
       .add({
-        position: vec3.fromValues(0, 20, 0),
-        direction: vec3.fromValues(0.0, 0.1, 0),
-        color: vec3.fromValues(1, 0, 0),
+        position: vec3.fromValues(10, 40, 1),
+        direction: vec3.fromValues(0, 1.0, 0),
+        color: vec3.fromValues(1, 1, 1),
         cutOff: deg2Rad(2),
-        outerCutOff: deg2Rad(24),
-        intensity: 20,
+        outerCutOff: deg2Rad(4),
+        intensity: 3,
       })
       .add({
-        position: vec3.fromValues(0, 20, 0),
-        direction: vec3.fromValues(0, 1, 0),
+        position: vec3.fromValues(0, 20, 3),
+        direction: vec3.fromValues(0, 1.0, 0),
         color: vec3.fromValues(0, 0, 1),
         cutOff: deg2Rad(2),
-        outerCutOff: deg2Rad(3),
+        outerCutOff: deg2Rad(24),
       })
       .init()
 
@@ -125,9 +127,18 @@ export class DeferredPass extends Effect {
       bindGroupLayouts: [
         bindGroupLayout,
         renderer.bindGroupsLayouts.frame,
-        spotLights.bindGroupLayout,
+        spotLights.bindGroupLayouts.lights,
+        spotLights.bindGroupLayouts.cameraProjections,
+        // renderer.bindGroupsLayouts.depthSampler,
       ],
-      bindGroups: [bindGroup, renderer.bindGroups.frame, spotLights.bindGroup],
+      bindGroups: [
+        bindGroup,
+        renderer.bindGroups.frame,
+        spotLights.bindGroups.lights,
+        spotLights.bindGroups.spotLight0Camera,
+        // spotLights.bindGroups.spotLight1Camera,
+        // renderer.bindGroups.depthSampler,
+      ],
     })
 
     this.framebufferDescriptor = {
@@ -155,6 +166,11 @@ export class DeferredPass extends Effect {
 
     this.pointLights = pointLights
     this.spotLights = spotLights
+
+    setInterval(() => {
+      this.spotLightTarget[0] = (Math.random() * 2 - 1) * 3
+      this.spotLightTarget[2] = (Math.random() * 2 - 1) * 3
+    }, 2000)
   }
 
   updateLightsSim(
@@ -162,22 +178,30 @@ export class DeferredPass extends Effect {
     time: DOMHighResTimeStamp,
   ) {
     this.pointLights.updateSim(computePass)
-
-    this.spotLights.get(0).position = vec3.fromValues(
-      Math.cos(time) * 10,
-      11,
-      Math.sin(time) * 10,
+    const spotLight = this.spotLights.get(0)
+    spotLight.position = vec3.fromValues(
+      spotLight.position[0] +
+        (this.spotLightTarget[0] - spotLight.position[0]) * 0.1,
+      spotLight.position[1] +
+        (this.spotLightTarget[1] - spotLight.position[1]) * 0.1,
+      spotLight.position[2] +
+        (this.spotLightTarget[2] - spotLight.position[2]) * 0.1,
     )
-    this.spotLights.get(0).direction = vec3.fromValues(
-      Math.cos(time) * 0.3,
-      0.1,
-      Math.sin(time) * 0.3,
-    )
-    this.spotLights.get(1).position = vec3.fromValues(
-      Math.cos(time + Math.PI) * 4,
-      20,
-      Math.sin(time + Math.PI) * 4,
-    )
+    // this.spotLights.get(0).direction = vec3.fromValues(
+    //   Math.cos(-time) * 0.1,
+    //   1,
+    //   Math.sin(-time) * 0.1,
+    // )
+    // this.spotLights.get(0).direction = vec3.fromValues(
+    //   Math.cos(time) * 0.3,
+    //   0.1,
+    //   Math.sin(time) * 0.3,
+    // )
+    // this.spotLights.get(1).position = vec3.fromValues(
+    //   Math.cos(time + Math.PI) * 4,
+    //   20,
+    //   Math.sin(time + Math.PI) * 4,
+    // )
   }
 
   public render(renderPass: GPURenderPassEncoder): void {

@@ -8,6 +8,7 @@ import { Metaballs } from './meshes/metaballs'
 import { BoxOutline } from './meshes/box-outline'
 import { Ground } from './meshes/ground'
 import { Particles } from './meshes/particles'
+import { ShadowDebugger } from './debug/shadow-debugger'
 ;(async () => {
   let oldTime = 0
 
@@ -62,7 +63,7 @@ import { Particles } from './meshes/particles'
   renderer.device.queue.writeBuffer(
     renderer.ubos.projectionUBO,
     16 * Float32Array.BYTES_PER_ELEMENT + 16 * Float32Array.BYTES_PER_ELEMENT,
-    new Float32Array([innerWidth, innerHeight]),
+    new Float32Array(renderer.outputSize),
   )
   renderer.device.queue.writeBuffer(
     renderer.ubos.projectionUBO,
@@ -105,20 +106,24 @@ import { Particles } from './meshes/particles'
     height: 100,
     depth: 75,
 
-    xStep: 0.1,
-    yStep: 0.1,
-    zStep: 0.1,
+    xStep: 0.075,
+    yStep: 0.075,
+    zStep: 0.075,
 
-    isoLevel: 40,
+    isoLevel: 200,
   }
 
   const deferredPass = new DeferredPass(renderer)
-  const metaballs = new Metaballs(renderer, volume)
+  const metaballs = new Metaballs(renderer, volume, deferredPass.spotLights)
+  const ground = new Ground(renderer, deferredPass.spotLights)
   const boxOutline = new BoxOutline(renderer)
-  const ground = new Ground(renderer)
   const particles = new Particles(
     renderer,
     deferredPass.pointLights.lightsBuffer,
+  )
+  const spotLightShadowDebugger = new ShadowDebugger(
+    renderer,
+    deferredPass.spotLights.get(0),
   )
 
   // const gridHelper = new HelperGrid(renderer)
@@ -203,6 +208,16 @@ import { Particles } from './meshes/particles'
 
     // shadowRenderPass.end()
 
+    const spotLight0ShadowPass = commandEncoder.beginRenderPass({
+      ...deferredPass.spotLights.get(0).framebufferDescriptor,
+      label: 'spot light 0 shadow map render pass',
+    })
+
+    metaballs.renderShadow(spotLight0ShadowPass)
+    ground.renderShadow(spotLight0ShadowPass)
+
+    spotLight0ShadowPass.end()
+
     const gBufferPass = commandEncoder.beginRenderPass({
       ...deferredPass.framebufferDescriptor,
       label: 'gbuffer',
@@ -220,6 +235,8 @@ import { Particles } from './meshes/particles'
     })
 
     deferredPass.render(renderPass)
+
+    // spotLightShadowDebugger.render(renderPass)
 
     renderPass.end()
 

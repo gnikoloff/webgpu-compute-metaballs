@@ -2,7 +2,7 @@
   "name": "webgpu-marching-cubes",
   "version": "0.0.0",
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite --host --https",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

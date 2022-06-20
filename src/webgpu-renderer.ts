@@ -26,8 +26,8 @@ export class WebGPURenderer {
   set outputSize(size: [number, number]) {
     const [w, h] = size
     this.#outputSize = size
-    this.canvas.width = w * devicePixelRatio
-    this.canvas.height = h * devicePixelRatio
+    this.canvas.width = w
+    this.canvas.height = h
     this.canvas.style.setProperty('width', `${w}px`)
     this.canvas.style.setProperty('height', `${h}px`)
   }
@@ -153,6 +153,13 @@ export class WebGPURenderer {
             GPUShaderStage.COMPUTE,
           buffer: {},
         },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          sampler: {
+            type: 'filtering',
+          },
+        },
       ],
     })
     this.bindGroups.frame = this.device.createBindGroup({
@@ -167,40 +174,12 @@ export class WebGPURenderer {
           binding: 1,
           resource: { buffer: this.ubos.viewUBO },
         },
+        {
+          binding: 2,
+          resource: this.device.createSampler({}),
+        },
       ],
     })
-
-    // this.bindGroupsLayouts.screenOrthoFrame = this.device.createBindGroupLayout(
-    //   {
-    //     label: 'screen ortho frame bind group layout',
-    //     entries: [
-    //       {
-    //         binding: 0,
-    //         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-    //         buffer: {},
-    //       },
-    //       {
-    //         binding: 1,
-    //         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-    //         buffer: {},
-    //       },
-    //     ],
-    //   },
-    // )
-    // this.bindGroups.screenOrthoFrame = this.device.createBindGroup({
-    //   label: 'screen ortho frame bind group',
-    //   layout: this.bindGroupsLayouts.screenOrthoFrame,
-    //   entries: [
-    //     {
-    //       binding: 0,
-    //       resource: { buffer: this.ubos.screenProjectionUBO },
-    //     },
-    //     {
-    //       binding: 1,
-    //       resource: { buffer: this.ubos.screenViewUBO },
-    //     },
-    //   ],
-    // })
   }
 
   onRender() {

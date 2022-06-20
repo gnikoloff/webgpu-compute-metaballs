@@ -1,20 +1,15 @@
-import { WebGPURenderer } from '../webgpu-renderer'
 import { EffectVertexShader } from '../shaders/shared-chunks'
-import { IScreenEffect } from '../protocol'
+import { WebGPURenderer } from '../webgpu-renderer'
 
-export class Effect {
+export class TextureDebuggerBase {
   protected renderPipeline: GPURenderPipeline
+  protected bindGroupLayouts: { [key: string]: GPUBindGroupLayout } = {}
+  protected bindGroups: { [key: string]: GPUBindGroup } = {}
 
-  private readonly bindGroups: GPUBindGroup[] = []
   private vertexBuffer: GPUBuffer
   private indexBuffer: GPUBuffer
 
-  constructor(
-    protected renderer: WebGPURenderer,
-    { fragmentShader, bindGroupLayouts = [], bindGroups = [] }: IScreenEffect,
-  ) {
-    this.bindGroups = bindGroups
-
+  constructor(protected renderer: WebGPURenderer) {
     // prettier-ignore
     const vertexData = new Float32Array([
 			-1,  1,
@@ -30,7 +25,7 @@ export class Effect {
     this.vertexBuffer = renderer.device.createBuffer({
       size: vertexData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      label: 'fullscreen effect vertex buffer',
+      label: 'texture debugger vertex buffer',
       mappedAtCreation: true,
     })
     new Float32Array(this.vertexBuffer.getMappedRange()).set(vertexData)
@@ -39,20 +34,23 @@ export class Effect {
     this.indexBuffer = renderer.device.createBuffer({
       size: indices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-      label: 'fullscreen effect index buffer',
+      label: 'texture debugger index buffer',
       mappedAtCreation: true,
     })
     new Uint16Array(this.indexBuffer.getMappedRange()).set(indices)
     this.indexBuffer.unmap()
-
-    this.init(fragmentShader, bindGroupLayouts)
   }
-  async init(fragmentShader: string, bindGroupLayouts: GPUBindGroupLayout[]) {
+
+  async init(fragmentShader: string) {
+    const bindGroupLayouts = []
+    for (const bindGroupLayout of Object.values(this.bindGroupLayouts)) {
+      bindGroupLayouts.push(bindGroupLayout)
+    }
     this.renderPipeline = await this.renderer.device.createRenderPipeline({
-      label: 'fullscreen effect render pipeline',
+      label: 'texture debugger render pipeline',
       layout: this.renderer.device.createPipelineLayout({
-        label: 'fullscreen effect render pipeline layout',
-        bindGroupLayouts: [...bindGroupLayouts],
+        label: 'texture debugger render pipeline layout',
+        bindGroupLayouts,
       }),
       primitive: {
         topology: 'triangle-strip',
@@ -85,14 +83,15 @@ export class Effect {
       },
     })
   }
-
   protected preRender(renderPass: GPURenderPassEncoder): void {
     if (!this.renderPipeline) {
       return
     }
     renderPass.setPipeline(this.renderPipeline)
-    for (let i = 0; i < this.bindGroups.length; i++) {
-      renderPass.setBindGroup(i, this.bindGroups[i])
+    let i = 0
+    for (const bindGroup of Object.values(this.bindGroups)) {
+      renderPass.setBindGroup(i, bindGroup)
+      i++
     }
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
