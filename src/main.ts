@@ -179,44 +179,25 @@ import { ShadowDebugger } from './debug/shadow-debugger'
         1 * Float32Array.BYTES_PER_ELEMENT,
       new Float32Array([dt]),
     )
-
-    // renderer.device.queue.writeBuffer(
-    //   renderer.ubos.screenProjectionUBO,
-    //   0 * Float32Array.BYTES_PER_ELEMENT,
-    //   screenOrthoCamera.projectionMatrix as Float32Array,
-    // )
+    
     renderer.onRender()
 
     const commandEncoder = renderer.device.createCommandEncoder()
 
     const computePass = commandEncoder.beginComputePass()
-
     metaballs.updateSim(computePass, time, dt)
     deferredPass.updateLightsSim(computePass, time)
-
     computePass.end()
 
-    // const shadowRenderPass = commandEncoder.beginRenderPass({
-    //   label: 'shadow map framebuffer',
-    //   colorAttachments: [],
-    //   depthStencilAttachment: {
-    //     view: renderer.shadowDepthTexture.createView(),
-    //     depthLoadOp: 'clear',
-    //     depthStoreOp: 'store',
-    //   },
-    // })
-
-    // shadowRenderPass.end()
-
-    const spotLight0ShadowPass = commandEncoder.beginRenderPass({
+    const spotLightShadowPass = commandEncoder.beginRenderPass({
       ...deferredPass.spotLight.framebufferDescriptor,
       label: 'spot light 0 shadow map render pass',
     })
 
-    metaballs.renderShadow(spotLight0ShadowPass)
-    ground.renderShadow(spotLight0ShadowPass)
+    metaballs.renderShadow(spotLightShadowPass)
+    ground.renderShadow(spotLightShadowPass)
 
-    spotLight0ShadowPass.end()
+    spotLightShadowPass.end()
 
     const gBufferPass = commandEncoder.beginRenderPass({
       ...deferredPass.framebufferDescriptor,
@@ -235,8 +216,6 @@ import { ShadowDebugger } from './debug/shadow-debugger'
     })
 
     deferredPass.render(renderPass)
-
-    // spotLightShadowDebugger.render(renderPass)
 
     renderPass.end()
 

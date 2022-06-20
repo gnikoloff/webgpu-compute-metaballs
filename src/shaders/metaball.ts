@@ -298,8 +298,8 @@ export const MetaballsFragmentShader = `
 			let ID = 0.0;
 			var normal = normalize(input.normal);
       var output: Output;
-			output.normalMaterialID = vec4(encodeNormals(normal), 0.0, ID);
-			output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
+			output.normalMaterialID = vec4(encodeNormals(normal), 1.0, ID);
+			output.albedo = vec4(1.0, 1.0, 1.0, 0.5);
 			return output;
     }
 `

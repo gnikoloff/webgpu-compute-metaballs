@@ -40,11 +40,11 @@ export const DeferredPassFragmentShader = `
 	@group(1) @binding(1) var<uniform> view: ViewUniformsStruct;
 	@group(1) @binding(2) var depthSampler: sampler;
 
-	@group(2) @binding(0) var<uniform> spotLight0: SpotLight;
-	@group(2) @binding(1) var<uniform> spotLight0Projection: ProjectionUniformsStruct;
-	@group(2) @binding(2) var<uniform> spotLight0View: ViewUniformsStruct;
+	@group(2) @binding(0) var<uniform> spotLight: SpotLight;
+	@group(2) @binding(1) var<uniform> spotLightProjection: ProjectionUniformsStruct;
+	@group(2) @binding(2) var<uniform> spotLightView: ViewUniformsStruct;
 
-	@group(3) @binding(0) var spotLight0DepthTexture: texture_depth_2d;
+	@group(3) @binding(0) var spotLightDepthTexture: texture_depth_2d;
 
 	struct Inputs {
 		@builtin(position) coords: vec4<f32>,
@@ -76,7 +76,7 @@ export const DeferredPassFragmentShader = `
 			view.inverseMatrix
 		);
 		
-		let normalMaterialID = textureLoad(
+		let normalRoughnessMatID = textureLoad(
 			normalTexture,
 			vec2<i32>(floor(input.coords.xy)),
 			0
@@ -89,20 +89,20 @@ export const DeferredPassFragmentShader = `
 		);
 
 		var surface: Surface;
-		surface.ID = normalMaterialID.w;
+		surface.ID = normalRoughnessMatID.w;
 
 		var output: Output;
 
 		// ## Shadow map visibility
 
-		var posFromLight = spotLight0Projection.matrix * spotLight0View.matrix * vec4(worldPosition.xyz, 1.0);
+		var posFromLight = spotLightProjection.matrix * spotLightView.matrix * vec4(worldPosition.xyz, 1.0);
 		posFromLight = vec4(posFromLight.xyz / posFromLight.w, 1.0);
 		var shadowPos = vec3(
 			posFromLight.xy * vec2(0.5,-0.5) + vec2(0.5, 0.5),
 			posFromLight.z
 		);
 
-		let projectedDepth = textureSample(spotLight0DepthTexture, depthSampler, shadowPos.xy);
+		let projectedDepth = textureSample(spotLightDepthTexture, depthSampler, shadowPos.xy);
 
 		if (surface.ID == 0.0) {
 
@@ -121,10 +121,10 @@ export const DeferredPassFragmentShader = `
 			// ## PBR
 
 			surface.albedo = albedo;
-			surface.metallic = 1.0;
-			surface.roughness = 0.3;
+			surface.metallic = normalRoughnessMatID.z;
+			surface.roughness = albedo.a;
 			surface.worldPos = worldPosition;
-			surface.N = decodeNormals(normalMaterialID.xy);
+			surface.N = decodeNormals(normalRoughnessMatID.xy);
 			surface.F0 = mix(vec3(0.04), surface.albedo.rgb, vec3(surface.metallic));
 			surface.V = normalize(view.position - worldPosition.xyz);
 
@@ -158,7 +158,7 @@ export const DeferredPassFragmentShader = `
 
 			// ## Spot lighting
 
-			Lo += SpotLightRadiance(spotLight0, surface) * visibility;
+			Lo += SpotLightRadiance(spotLight, surface) * visibility;
 
 			let ambient = vec3(0.01) * albedo.rgb;
 			let color = linearTosRGB(ambient + Lo);
@@ -177,7 +177,7 @@ export const DeferredPassFragmentShader = `
 
 			// output.color = vec4(vec3(visibility), 1.0);
 			// output.color = vec4(shadowPos, 1.0);
-			// let ddd = textureLoad(spotLight0DepthTexture, vec2<i32>(floor(input.coords.xy)), 0);
+			// let ddd = textureLoad(spotLightDepthTexture, vec2<i32>(floor(input.coords.xy)), 0);
 			// output.color = vec4(vec3(LinearizeDepth(ddd)), 1.0);
 
 		} else if (0.1 - surface.ID < 0.01 && surface.ID < 0.1) {

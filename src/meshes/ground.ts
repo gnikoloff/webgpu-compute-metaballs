@@ -23,7 +23,8 @@ export class Ground {
   private modelBindGroup: GPUBindGroup
   private vertexBuffer: GPUBuffer
   private normalBuffer: GPUBuffer
-  private instanceBuffer: GPUBuffer
+  private instanceOffsetsBuffer: GPUBuffer
+  private instanceMaterialBuffer: GPUBuffer
   private uniformBuffer: GPUBuffer
 
   private instanceCount = 0
@@ -56,6 +57,7 @@ export class Ground {
     this.normalBuffer.unmap()
 
     const instanceOffsets = new Float32Array(Ground.WIDTH * Ground.HEIGHT * 3)
+    const instanceMetallicRougness = new Float32Array(Ground.WIDTH * Ground.HEIGHT * 2)
 
     const spacingX = Ground.WIDTH / Ground.COUNT + Ground.SPACING
     const spacingY = Ground.HEIGHT / Ground.COUNT + Ground.SPACING
@@ -64,22 +66,41 @@ export class Ground {
       for (let y = 0; y < Ground.COUNT; y++) {
         const xPos = x * spacingX
         const yPos = y * spacingY
+
+        // xyz offset
         instanceOffsets[i * 3 + 0] = xPos - Ground.WIDTH / 2
         instanceOffsets[i * 3 + 1] = yPos - Ground.HEIGHT / 2
         instanceOffsets[i * 3 + 2] = Math.random() * 3 + 1
+
+        // metallic
+        instanceMetallicRougness[i * 2 + 0] = Math.random() * 0.15 + 0.5
+
+        // roughness
+        instanceMetallicRougness[i * 2 + 1] = Math.random() * 0.15 + 0.5
+
         i++
       }
     }
+
     this.instanceCount = instanceOffsets.length / 3
 
-    this.instanceBuffer = renderer.device.createBuffer({
+    this.instanceOffsetsBuffer = renderer.device.createBuffer({
       size: instanceOffsets.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      label: 'ground instance buffer',
+      label: 'ground instance xyz buffer',
       mappedAtCreation: true,
     })
-    new Float32Array(this.instanceBuffer.getMappedRange()).set(instanceOffsets)
-    this.instanceBuffer.unmap()
+    new Float32Array(this.instanceOffsetsBuffer.getMappedRange()).set(instanceOffsets)
+    this.instanceOffsetsBuffer.unmap()
+
+    this.instanceMaterialBuffer = renderer.device.createBuffer({
+      size: instanceMetallicRougness.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      label: 'ground instance material buffer',
+      mappedAtCreation: true,
+    })
+    new Float32Array(this.instanceMaterialBuffer.getMappedRange()).set(instanceMetallicRougness)
+    this.instanceMaterialBuffer.unmap()
 
     mat4.translate(this.modelMatrix, this.modelMatrix, [0, Ground.WORLD_Y, 0])
     this.uniformBuffer = renderer.device.createBuffer({
@@ -169,6 +190,22 @@ export class Ground {
               },
             ],
           },
+          {
+            arrayStride: 2 * Float32Array.BYTES_PER_ELEMENT,
+            stepMode: 'instance',
+            attributes: [
+              {
+                shaderLocation: 3,
+                format: 'float32',
+                offset: 0 * Float32Array.BYTES_PER_ELEMENT,
+              },
+              {
+                shaderLocation: 4,
+                format: 'float32',
+                offset: 1 * Float32Array.BYTES_PER_ELEMENT,
+              },
+            ]
+          }
         ],
         module: this.renderer.device.createShaderModule({
           code: GroundVertexShader,
@@ -252,7 +289,7 @@ export class Ground {
     renderPass.setBindGroup(0, this.spotLight.bindGroup.ubos)
     renderPass.setBindGroup(1, this.modelBindGroup)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
-    renderPass.setVertexBuffer(1, this.instanceBuffer)
+    renderPass.setVertexBuffer(1, this.instanceOffsetsBuffer)
     renderPass.draw(36, this.instanceCount)
     return this
   }
@@ -266,7 +303,8 @@ export class Ground {
     renderPass.setBindGroup(1, this.modelBindGroup)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setVertexBuffer(1, this.normalBuffer)
-    renderPass.setVertexBuffer(2, this.instanceBuffer)
+    renderPass.setVertexBuffer(2, this.instanceOffsetsBuffer)
+    renderPass.setVertexBuffer(3, this.instanceMaterialBuffer)
     renderPass.draw(36, this.instanceCount)
   }
 }

@@ -16,10 +16,14 @@ export const GroundVertexShader = `
 		@location(0) position: vec3<f32>,
 		@location(1) normal: vec3<f32>,
 		@location(2) instanceOffset: vec3<f32>,
+		@location(3) metallic: f32,
+		@location(4) roughness: f32,
 	}
 
 	struct Output {
 		@location(0) normal: vec3<f32>,
+		@location(1) metallic: f32,
+		@location(2) roughness: f32,
 		@builtin(position) position: vec4<f32>,
 	}
 
@@ -43,6 +47,8 @@ export const GroundVertexShader = `
 											worldPosition;
 
 		output.normal = input.normal;
+		output.metallic = input.metallic;
+		output.roughness = input.roughness;
 		return output;
 	}
 `
@@ -52,6 +58,8 @@ export const GroundFragmentShader = `
 
 	struct Inputs {
 		@location(0) normal: vec3<f32>,
+		@location(1) metallic: f32,
+		@location(2) roughness: f32,
 	}
 	struct Output {
 		@location(0) normal: vec4<f32>,	
@@ -62,8 +70,8 @@ export const GroundFragmentShader = `
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		var normal = normalize(input.normal);
-		output.normal = vec4(encodeNormals(normal), 0.0, 0.0);
-		output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
+		output.normal = vec4(encodeNormals(normal), input.metallic, 0.0);
+		output.albedo = vec4(1.0, 1.0, 1.0, input.roughness);
 		return output;
 	}
 `
