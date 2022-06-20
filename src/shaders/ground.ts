@@ -1,4 +1,4 @@
-import { ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
+import { EncodeNormals, ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
 
 export const GroundVertexShader = `
 	${ProjectionUniformsStruct}
@@ -37,7 +37,7 @@ export const GroundVertexShader = `
 			0.0, 0.0, 1.0, 0.0,
 			0.0, 0.0, 0.0, 1.0
 		);
-		let worldPosition = model.matrix * scaleMatrix *  vec4(input.position + offsetPos, 1.0);
+		let worldPosition = model.matrix * scaleMatrix * vec4(input.position + offsetPos, 1.0);
 		output.position = projection.matrix *
 											view.matrix *
 											worldPosition;
@@ -48,6 +48,8 @@ export const GroundVertexShader = `
 `
 
 export const GroundFragmentShader = `
+	${EncodeNormals}
+
 	struct Inputs {
 		@location(0) normal: vec3<f32>,
 	}
@@ -60,7 +62,7 @@ export const GroundFragmentShader = `
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		var normal = normalize(input.normal);
-		output.normal = vec4(normal.rgb, 0.0);
+		output.normal = vec4(encodeNormals(normal), 0.0, 0.0);
 		output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
 		return output;
 	}
@@ -74,8 +76,8 @@ export const GroundShadowVertexShader = `
 		matrix: mat4x4<f32>,
 	}
 
-	@group(0) @binding(0) var<uniform> projection: ProjectionUniformsStruct;
-	@group(0) @binding(1) var<uniform> view: ViewUniformsStruct;
+	@group(0) @binding(1) var<uniform> projection: ProjectionUniformsStruct;
+	@group(0) @binding(2) var<uniform> view: ViewUniformsStruct;
 	@group(1) @binding(0) var<uniform> model: ModelUniforms;
 
 	struct Inputs {

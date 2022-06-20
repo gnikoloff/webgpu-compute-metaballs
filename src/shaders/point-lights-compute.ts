@@ -23,15 +23,6 @@ export const UpdatePointLightsComputeShader = `
 			return;
 		}
 
-		// lightsBuffer.lights[index].position.x = lightsBuffer.lights[index].position.y - 0.5 - 0.003 * (f32(index) - 64.0 * floor(f32(index) / 64.0));
-
-		// let indexf32 = f32(index);
-		// let angle = PI * 2.0 / f32(config.numLights) * indexf32;
-		// let radius = 30.0;
-		// let speed = view.time * 0.3;
-		// lightsBuffer.lights[index].position.x = cos(angle + speed) * radius;
-		// lightsBuffer.lights[index].position.z = sin(angle + speed) * radius;
-
 		lightsBuffer.lights[index].position.x += lightsBuffer.lights[index].velocity.x * view.deltaTime;
 		lightsBuffer.lights[index].position.z += lightsBuffer.lights[index].velocity.z * view.deltaTime;
 		

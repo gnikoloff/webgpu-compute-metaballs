@@ -114,8 +114,8 @@ import { ShadowDebugger } from './debug/shadow-debugger'
   }
 
   const deferredPass = new DeferredPass(renderer)
-  const metaballs = new Metaballs(renderer, volume, deferredPass.spotLights)
-  const ground = new Ground(renderer, deferredPass.spotLights)
+  const metaballs = new Metaballs(renderer, volume, deferredPass.spotLight)
+  const ground = new Ground(renderer, deferredPass.spotLight)
   const boxOutline = new BoxOutline(renderer)
   const particles = new Particles(
     renderer,
@@ -123,7 +123,7 @@ import { ShadowDebugger } from './debug/shadow-debugger'
   )
   const spotLightShadowDebugger = new ShadowDebugger(
     renderer,
-    deferredPass.spotLights.get(0),
+    deferredPass.spotLight,
   )
 
   // const gridHelper = new HelperGrid(renderer)
@@ -209,7 +209,7 @@ import { ShadowDebugger } from './debug/shadow-debugger'
     // shadowRenderPass.end()
 
     const spotLight0ShadowPass = commandEncoder.beginRenderPass({
-      ...deferredPass.spotLights.get(0).framebufferDescriptor,
+      ...deferredPass.spotLight.framebufferDescriptor,
       label: 'spot light 0 shadow map render pass',
     })
 

@@ -49,9 +49,13 @@ export const ParticlesVertexShader = `
 		var worldPosition = vec4(input.position, 0.0, 1.0);
 		worldPosition = scaleMatrix * worldPosition;
 
+		
+
 		worldPosition += vec4(instancePosition.xyz, 0.0);
 
 		var viewMatrix = view.matrix;
+		
+
 		
 		output.position = projection.matrix *
 											viewMatrix *

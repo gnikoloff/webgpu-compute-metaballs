@@ -3,7 +3,7 @@ import { UpdatePointLightsComputeShader } from '../shaders/point-lights-compute'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class PointLights {
-  public static readonly MAX_LIGHTS_COUNT = 24
+  public static readonly MAX_LIGHTS_COUNT = 32
 
   private lightsBufferComputeBindGroupLayout: GPUBindGroupLayout
   private lightsBufferComputeBindGroup: GPUBindGroup

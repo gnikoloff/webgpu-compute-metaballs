@@ -10,7 +10,7 @@ import {
 
 import { WebGPURenderer } from '../webgpu-renderer'
 import { MetaballsCompute } from '../compute/metaballs'
-import { SpotLights } from '../lighting/spot-lights'
+import { SpotLight } from '../lighting/spot-light'
 
 export class Metaballs {
   private metaballsCompute: MetaballsCompute
@@ -28,7 +28,7 @@ export class Metaballs {
   constructor(
     private renderer: WebGPURenderer,
     volume: IVolumeSettings,
-    private spotLights: SpotLights,
+    private spotLight: SpotLight,
   ) {
     this.metaballsCompute = new MetaballsCompute(renderer, volume)
     this.init()
@@ -103,7 +103,7 @@ export class Metaballs {
         layout: this.renderer.device.createPipelineLayout({
           label: 'metaballs shadow rendering pipeline layout',
           bindGroupLayouts: [
-            this.spotLights.bindGroupLayouts.cameraProjections,
+            this.spotLight.bindGroupLayout.ubos,
           ],
         }),
         vertex: {
@@ -153,7 +153,7 @@ export class Metaballs {
       return this
     }
     renderPass.setPipeline(this.renderShadowPipeline)
-    renderPass.setBindGroup(0, this.spotLights.bindGroups.spotLight0Camera)
+    renderPass.setBindGroup(0, this.spotLight.bindGroup.ubos)
     renderPass.setVertexBuffer(0, this.metaballsCompute.vertexBuffer)
     renderPass.setIndexBuffer(this.metaballsCompute.indexBuffer, 'uint32')
     renderPass.drawIndexed(this.metaballsCompute.indexCount)

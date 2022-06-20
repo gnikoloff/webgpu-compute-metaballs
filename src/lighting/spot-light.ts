@@ -5,7 +5,7 @@ import { ISpotLight } from '../protocol'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class SpotLight {
-  private static readonly SHADOWMAP_SIZE = 512
+  private static readonly SHADOWMAP_SIZE = 256
 
   private camera: PerspectiveCamera
 
@@ -21,6 +21,9 @@ export class SpotLight {
   public viewUBO: GPUBuffer
   public depthTexture: GPUTexture
   public framebufferDescriptor: GPURenderPassDescriptor
+
+  public bindGroupLayout: { [key: string]: GPUBindGroupLayout } = {}
+  public bindGroup: { [key: string]: GPUBindGroup } = {}
 
   public get position(): vec3 {
     return this._position
@@ -156,6 +159,7 @@ export class SpotLight {
     this.camera = new PerspectiveCamera(deg2Rad(56), 1, 0.1, 120)
     this.camera.updateViewMatrix().updateProjectionMatrix()
     this.depthTexture = renderer.device.createTexture({
+      label: 'spot light depth texture',
       size: {
         width: SpotLight.SHADOWMAP_SIZE,
         height: SpotLight.SHADOWMAP_SIZE,
@@ -263,5 +267,71 @@ export class SpotLight {
         depthStoreOp: 'store',
       },
     }
+
+    this.bindGroupLayout.ubos = this.renderer.device.createBindGroupLayout({
+      label: 'spot light ubos bind group layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          buffer: {}
+        },
+        {
+          binding: 1,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {},
+        },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          buffer: {},
+        },
+      ]
+    })
+    this.bindGroupLayout.depthTexture = this.renderer.device.createBindGroupLayout({
+      label: 'spot light depth texture bind group layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+          texture: { sampleType: 'depth' },
+        },
+      ]
+    })
+
+    this.bindGroup.ubos = this.renderer.device.createBindGroup({
+      label: 'spot light ubos bind group',
+      layout: this.bindGroupLayout.ubos,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.lightInfoUBO,
+          },
+        },
+        {
+          binding: 1,
+          resource: {
+            buffer: this.projectionUBO,
+          },
+        },
+        {
+          binding: 2,
+          resource: {
+            buffer: this.viewUBO,
+          },
+        },
+      ]
+    })
+    this.bindGroup.depthTexture = this.renderer.device.createBindGroup({
+      label: 'spot light depth texture bind group',
+      layout: this.bindGroupLayout.depthTexture,
+      entries: [
+        {
+          binding: 0,
+          resource: this.depthTexture.createView()
+        },
+      ]
+    })
   }
 }

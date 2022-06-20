@@ -67,11 +67,11 @@ export const SpotLightStruct = `
 
 export const SurfaceShaderStruct = `
   struct Surface {
-    baseColor: vec4<f32>,
     albedo: vec4<f32>,
     metallic: f32,
     roughness: f32,
-		materialID: f32,
+    worldPos: vec4<f32>,
+		ID: f32,
     N: vec3<f32>,
     F0: vec3<f32>,
     V: vec3<f32>,
@@ -202,8 +202,8 @@ export const LightRadiance = `
     return (kD * surface.albedo.rgb / vec3(PI, PI, PI) + specular) * radiance * NdotL;
   }
 
-	fn SpotLightRadiance(light: SpotLight, pointToLight: vec3<f32>, surface: Surface) -> vec3<f32> {
-    let L = normalize(pointToLight);
+	fn SpotLightRadiance(light: SpotLight, surface: Surface) -> vec3<f32> {
+    let L = normalize(light.position - surface.worldPos.xyz);
     let H = normalize(surface.V + L);
     
     // spotlight (soft edges)
@@ -252,11 +252,49 @@ export const LightRadiance = `
   }
 `
 
+export const ReconstructWorldPosFromDepth = `
+  fn reconstructWorldPosFromZ(
+    coords: vec2<f32>,
+    size: vec2<f32>,
+    depthTexture: texture_depth_2d,
+    projInverse: mat4x4<f32>,
+    viewInverse: mat4x4<f32>
+  ) -> vec4<f32> {
+    let uv = coords.xy / projection.outputSize;
+    var depth = textureLoad(depthTexture, vec2<i32>(floor(coords)), 0);
+		let x = uv.x * 2 - 1;
+		let y = (1 - uv.y) * 2 - 1;
+		let projectedPos = vec4(x, y, depth, 1.0);
+		var worldPosition = projInverse * projectedPos;
+		worldPosition = vec4(worldPosition.xyz / worldPosition.w, 1.0);
+		worldPosition = viewInverse * worldPosition;
+    return worldPosition;
+  }
+`
+
 // see http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
 export const LinearToSRGB = `
   let GAMMA = 2.2;
   fn linearTosRGB(linear: vec3<f32>) -> vec3<f32> {
     let INV_GAMMA = 1.0 / GAMMA;
     return pow(linear, vec3<f32>(INV_GAMMA, INV_GAMMA, INV_GAMMA));
+  }
+`
+
+// Normal gbuffer encoding / decoding. Packs normals as xyz to 2 values only
+// Shamelessly stolen from https://aras-p.info/texts/CompactNormalStorage.html
+export const EncodeNormals = `
+  fn encodeNormals(n: vec3<f32>) -> vec2<f32> {
+    let p = sqrt(n.z * 8 + 8);
+    return vec2(n.xy / p + 0.5);
+  }
+`
+
+export const DecodeNormals = `
+  fn decodeNormals(enc: vec2<f32>) -> vec3<f32> {
+    let fenc = enc * 4 - 2;
+    let f = dot(fenc, fenc);
+    let g = sqrt(1-f/4);
+    return vec3(fenc*g, 1-f/2);
   }
 `

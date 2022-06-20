@@ -2,8 +2,8 @@ import { METABALLS_COMPUTE_WORKGROUP_SIZE } from '../constants'
 import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
-} from '../geometry-helper-data'
-import { ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
+} from '../geometry/marching-cubes'
+import { EncodeNormals, ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
 
 export const IsosurfaceVolume = `
   struct IsosurfaceVolume {
@@ -284,6 +284,8 @@ export const MetaballsVertexShader = `
 `
 
 export const MetaballsFragmentShader = `
+    ${EncodeNormals}
+
     struct Inputs {
       @location(0) normal: vec3<f32>,
     }
@@ -293,10 +295,10 @@ export const MetaballsFragmentShader = `
 		}
     @fragment
     fn main(input: Inputs) -> Output {
-			let materialID = 0.0;
+			let ID = 0.0;
 			var normal = normalize(input.normal);
       var output: Output;
-			output.normalMaterialID = vec4(normal, materialID);
+			output.normalMaterialID = vec4(encodeNormals(normal), 0.0, ID);
 			output.albedo = vec4(1.0, 1.0, 1.0, 1.0);
 			return output;
     }
@@ -306,8 +308,8 @@ export const MetaballsShadowVertexShader = `
     ${ProjectionUniformsStruct}
     ${ViewUniformsStruct}
 
-		@group(0) @binding(0) var<uniform> projection: ProjectionUniformsStruct;
-		@group(0) @binding(1) var<uniform> view: ViewUniformsStruct;
+		@group(0) @binding(1) var<uniform> projection: ProjectionUniformsStruct;
+		@group(0) @binding(2) var<uniform> view: ViewUniformsStruct;
 
     struct Inputs {
       @location(0) position: vec3<f32>,

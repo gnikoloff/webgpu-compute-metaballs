@@ -1,6 +1,7 @@
 import { mat4 } from 'gl-matrix'
 import { DEPTH_FORMAT } from '../constants'
-import { BoxIndices, BoxInterleavedData } from '../geometry-helper-data'
+import { createCube } from '../geometry/create-box'
+import { SpotLight } from '../lighting/spot-light'
 import { SpotLights } from '../lighting/spot-lights'
 import {
   GroundFragmentShader,
@@ -21,7 +22,7 @@ export class Ground {
   private modelBindGroupLayout: GPUBindGroupLayout
   private modelBindGroup: GPUBindGroup
   private vertexBuffer: GPUBuffer
-  private indexBuffer: GPUBuffer
+  private normalBuffer: GPUBuffer
   private instanceBuffer: GPUBuffer
   private uniformBuffer: GPUBuffer
 
@@ -30,25 +31,29 @@ export class Ground {
 
   constructor(
     private renderer: WebGPURenderer,
-    private spotLights: SpotLights,
+    private spotLight: SpotLight,
   ) {
+    const  {
+      positions,
+      normals,
+    } = createCube()
     this.vertexBuffer = renderer.device.createBuffer({
-      size: BoxInterleavedData.byteLength,
+      size: positions.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      label: 'ground interleaved buffer',
+      label: 'ground vertex buffer',
       mappedAtCreation: true,
     })
-    new Float32Array(this.vertexBuffer.getMappedRange()).set(BoxInterleavedData)
+    new Float32Array(this.vertexBuffer.getMappedRange()).set(positions)
     this.vertexBuffer.unmap()
 
-    this.indexBuffer = renderer.device.createBuffer({
-      size: BoxIndices.byteLength,
-      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-      label: 'ground index buffer',
+    this.normalBuffer = renderer.device.createBuffer({
+      size: normals.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+      label: 'ground normal buffer',
       mappedAtCreation: true,
     })
-    new Uint16Array(this.indexBuffer.getMappedRange()).set(BoxIndices)
-    this.indexBuffer.unmap()
+    new Float32Array(this.normalBuffer.getMappedRange()).set(normals)
+    this.normalBuffer.unmap()
 
     const instanceOffsets = new Float32Array(Ground.WIDTH * Ground.HEIGHT * 3)
 
@@ -122,8 +127,8 @@ export class Ground {
         ],
       }),
       primitive: {
-        topology: 'triangle-strip',
-        stripIndexFormat: 'uint16',
+        topology: 'triangle-list',
+        // stripIndexFormat: 'uint16',
       },
       depthStencil: {
         format: DEPTH_FORMAT,
@@ -134,19 +139,24 @@ export class Ground {
         entryPoint: 'main',
         buffers: [
           {
-            arrayStride: 6 * Float32Array.BYTES_PER_ELEMENT,
+            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
             attributes: [
               {
                 shaderLocation: 0,
                 format: 'float32x3',
                 offset: 0 * Float32Array.BYTES_PER_ELEMENT,
               },
+            ],
+          },
+          {
+            arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
               {
                 shaderLocation: 1,
                 format: 'float32x3',
-                offset: 3 * Float32Array.BYTES_PER_ELEMENT,
+                offset: 0 * Float32Array.BYTES_PER_ELEMENT,
               },
-            ],
+            ]
           },
           {
             arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
@@ -186,7 +196,7 @@ export class Ground {
         layout: this.renderer.device.createPipelineLayout({
           label: 'ground shadow rendering pipeline layout',
           bindGroupLayouts: [
-            this.spotLights.bindGroupLayouts.cameraProjections,
+            this.spotLight.bindGroupLayout.ubos,
             this.modelBindGroupLayout,
           ],
         }),
@@ -194,7 +204,7 @@ export class Ground {
           entryPoint: 'main',
           buffers: [
             {
-              arrayStride: 6 * Float32Array.BYTES_PER_ELEMENT,
+              arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
               attributes: [
                 {
                   shaderLocation: 0,
@@ -225,8 +235,8 @@ export class Ground {
           format: 'depth32float',
         },
         primitive: {
-          topology: 'triangle-strip',
-          stripIndexFormat: 'uint16',
+          topology: 'triangle-list',
+          // stripIndexFormat: 'uint16',
         },
         multisample: {
           count: 1,
@@ -239,12 +249,11 @@ export class Ground {
       return this
     }
     renderPass.setPipeline(this.renderShadowPipeline)
-    renderPass.setBindGroup(0, this.spotLights.bindGroups.spotLight0Camera)
+    renderPass.setBindGroup(0, this.spotLight.bindGroup.ubos)
     renderPass.setBindGroup(1, this.modelBindGroup)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
     renderPass.setVertexBuffer(1, this.instanceBuffer)
-    renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
-    renderPass.drawIndexed(36, this.instanceCount)
+    renderPass.draw(36, this.instanceCount)
     return this
   }
 
@@ -256,8 +265,8 @@ export class Ground {
     renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
     renderPass.setBindGroup(1, this.modelBindGroup)
     renderPass.setVertexBuffer(0, this.vertexBuffer)
-    renderPass.setVertexBuffer(1, this.instanceBuffer)
-    renderPass.setIndexBuffer(this.indexBuffer, 'uint16')
-    renderPass.drawIndexed(36, this.instanceCount)
+    renderPass.setVertexBuffer(1, this.normalBuffer)
+    renderPass.setVertexBuffer(2, this.instanceBuffer)
+    renderPass.draw(36, this.instanceCount)
   }
 }

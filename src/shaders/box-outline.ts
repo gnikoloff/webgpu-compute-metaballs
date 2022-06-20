@@ -54,7 +54,7 @@ export const BoxOutlineFragmentShader = `
 		@location(1) albedo: vec4<f32>,	
 	}
 	@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
-  @group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
+  	@group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
 
 	@fragment
 	fn main(input: Input) -> Output {

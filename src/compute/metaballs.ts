@@ -2,7 +2,7 @@ import { MAX_METABALLS, METABALLS_COMPUTE_WORKGROUP_SIZE } from '../constants'
 import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
-} from '../geometry-helper-data'
+} from '../geometry/marching-cubes'
 import { IMetaballPos, IVolumeSettings } from '../protocol'
 import {
   MarchingCubesComputeSource,
