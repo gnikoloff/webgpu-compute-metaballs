@@ -30,14 +30,8 @@ export class Ground {
   private instanceCount = 0
   private readonly modelMatrix = mat4.create()
 
-  constructor(
-    private renderer: WebGPURenderer,
-    private spotLight: SpotLight,
-  ) {
-    const  {
-      positions,
-      normals,
-    } = createCube()
+  constructor(private renderer: WebGPURenderer, private spotLight: SpotLight) {
+    const { positions, normals } = createCube()
     this.vertexBuffer = renderer.device.createBuffer({
       size: positions.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
@@ -57,7 +51,9 @@ export class Ground {
     this.normalBuffer.unmap()
 
     const instanceOffsets = new Float32Array(Ground.WIDTH * Ground.HEIGHT * 3)
-    const instanceMetallicRougness = new Float32Array(Ground.WIDTH * Ground.HEIGHT * 2)
+    const instanceMetallicRougness = new Float32Array(
+      Ground.WIDTH * Ground.HEIGHT * 2,
+    )
 
     const spacingX = Ground.WIDTH / Ground.COUNT + Ground.SPACING
     const spacingY = Ground.HEIGHT / Ground.COUNT + Ground.SPACING
@@ -73,7 +69,7 @@ export class Ground {
         instanceOffsets[i * 3 + 2] = Math.random() * 3 + 1
 
         // metallic
-        instanceMetallicRougness[i * 2 + 0] = Math.random() * 0.15 + 0.5
+        instanceMetallicRougness[i * 2 + 0] = Math.random() * 0.15 + 0.8
 
         // roughness
         instanceMetallicRougness[i * 2 + 1] = Math.random() * 0.15 + 0.5
@@ -90,7 +86,9 @@ export class Ground {
       label: 'ground instance xyz buffer',
       mappedAtCreation: true,
     })
-    new Float32Array(this.instanceOffsetsBuffer.getMappedRange()).set(instanceOffsets)
+    new Float32Array(this.instanceOffsetsBuffer.getMappedRange()).set(
+      instanceOffsets,
+    )
     this.instanceOffsetsBuffer.unmap()
 
     this.instanceMaterialBuffer = renderer.device.createBuffer({
@@ -99,7 +97,9 @@ export class Ground {
       label: 'ground instance material buffer',
       mappedAtCreation: true,
     })
-    new Float32Array(this.instanceMaterialBuffer.getMappedRange()).set(instanceMetallicRougness)
+    new Float32Array(this.instanceMaterialBuffer.getMappedRange()).set(
+      instanceMetallicRougness,
+    )
     this.instanceMaterialBuffer.unmap()
 
     mat4.translate(this.modelMatrix, this.modelMatrix, [0, Ground.WORLD_Y, 0])
@@ -177,7 +177,7 @@ export class Ground {
                 format: 'float32x3',
                 offset: 0 * Float32Array.BYTES_PER_ELEMENT,
               },
-            ]
+            ],
           },
           {
             arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
@@ -204,8 +204,8 @@ export class Ground {
                 format: 'float32',
                 offset: 1 * Float32Array.BYTES_PER_ELEMENT,
               },
-            ]
-          }
+            ],
+          },
         ],
         module: this.renderer.device.createShaderModule({
           code: GroundVertexShader,

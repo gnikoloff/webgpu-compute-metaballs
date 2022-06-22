@@ -5,7 +5,7 @@ import { ISpotLight } from '../protocol'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class SpotLight {
-  private static readonly SHADOWMAP_SIZE = 256
+  private static readonly SHADOWMAP_SIZE = 512
 
   private camera: PerspectiveCamera
 
@@ -117,7 +117,7 @@ export class SpotLight {
       new Float32Array([Math.cos(v)]),
     )
 
-    this.camera.fieldOfView = v
+    this.camera.fieldOfView = v * 1.5
     this.camera.updateProjectionMatrix()
 
     this.renderer.device.queue.writeBuffer(
@@ -274,7 +274,7 @@ export class SpotLight {
         {
           binding: 0,
           visibility: GPUShaderStage.FRAGMENT,
-          buffer: {}
+          buffer: {},
         },
         {
           binding: 1,
@@ -286,18 +286,19 @@ export class SpotLight {
           visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
           buffer: {},
         },
-      ]
+      ],
     })
-    this.bindGroupLayout.depthTexture = this.renderer.device.createBindGroupLayout({
-      label: 'spot light depth texture bind group layout',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          texture: { sampleType: 'depth' },
-        },
-      ]
-    })
+    this.bindGroupLayout.depthTexture =
+      this.renderer.device.createBindGroupLayout({
+        label: 'spot light depth texture bind group layout',
+        entries: [
+          {
+            binding: 0,
+            visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            texture: { sampleType: 'depth' },
+          },
+        ],
+      })
 
     this.bindGroup.ubos = this.renderer.device.createBindGroup({
       label: 'spot light ubos bind group',
@@ -321,7 +322,7 @@ export class SpotLight {
             buffer: this.viewUBO,
           },
         },
-      ]
+      ],
     })
     this.bindGroup.depthTexture = this.renderer.device.createBindGroup({
       label: 'spot light depth texture bind group',
@@ -329,9 +330,9 @@ export class SpotLight {
       entries: [
         {
           binding: 0,
-          resource: this.depthTexture.createView()
+          resource: this.depthTexture.createView(),
         },
-      ]
+      ],
     })
   }
 }

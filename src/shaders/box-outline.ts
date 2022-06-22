@@ -1,4 +1,4 @@
-import { ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
+import { GBufferEncode, ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
 
 export const BoxOutlineVertexShader = `
 	${ProjectionUniformsStruct}
@@ -45,16 +45,13 @@ export const BoxOutlineVertexShader = `
 export const BoxOutlineFragmentShader = `
 	${ProjectionUniformsStruct}
 	${ViewUniformsStruct}
+	${GBufferEncode}
 	
 	struct Input {
 		@location(0) localPosition: vec3<f32>,
 	}
-	struct Output {
-		@location(0) normal: vec4<f32>,	
-		@location(1) albedo: vec4<f32>,	
-	}
 	@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
-  	@group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
+	@group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
 
 	@fragment
 	fn main(input: Input) -> Output {
@@ -63,8 +60,17 @@ export const BoxOutlineFragmentShader = `
 		if (spacing < 0.5) {
 			discard;
 		}
-		output.normal = vec4(0.0, 0.0, 0.0, 0.1);
-		output.albedo = vec4(vec3(spacing * 0.5), 0.0);
-		return output;
+		let normal = vec3(0.0);
+		let albedo = vec3(1.0);
+		let metallic = 0.0;
+		let roughness = 0.0;
+		let ID = 0.1;
+		return encodeGBufferOutput(
+			normal,
+			albedo,
+			metallic,
+			roughness,
+			ID
+		);
 	}
 `

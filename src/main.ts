@@ -3,6 +3,9 @@ import { WebGPURenderer } from './webgpu-renderer'
 import { PerspectiveCamera } from './camera/perspective-camera'
 import { CameraController } from './camera/camera-controller'
 import { DeferredPass } from './postfx/deferred-pass'
+import { BloomPass } from './postfx/bloom-pass'
+import { CopyPass } from './postfx/copy-pass'
+import { ResultPass } from './postfx/result-pass'
 
 import { Metaballs } from './meshes/metaballs'
 import { BoxOutline } from './meshes/box-outline'
@@ -114,6 +117,10 @@ import { ShadowDebugger } from './debug/shadow-debugger'
   }
 
   const deferredPass = new DeferredPass(renderer)
+  const copyPass = new CopyPass(renderer)
+  const bloomPass = new BloomPass(renderer, copyPass)
+  const resultPass = new ResultPass(renderer, copyPass, bloomPass)
+
   const metaballs = new Metaballs(renderer, volume, deferredPass.spotLight)
   const ground = new Ground(renderer, deferredPass.spotLight)
   const boxOutline = new BoxOutline(renderer)
@@ -179,26 +186,28 @@ import { ShadowDebugger } from './debug/shadow-debugger'
         1 * Float32Array.BYTES_PER_ELEMENT,
       new Float32Array([dt]),
     )
-    
+
     renderer.onRender()
 
     const commandEncoder = renderer.device.createCommandEncoder()
 
+    // ## Run compute shaders
     const computePass = commandEncoder.beginComputePass()
     metaballs.updateSim(computePass, time, dt)
     deferredPass.updateLightsSim(computePass, time)
+    bloomPass.updateBloom(computePass)
     computePass.end()
 
+    // ## Render scene from spot light POV
     const spotLightShadowPass = commandEncoder.beginRenderPass({
       ...deferredPass.spotLight.framebufferDescriptor,
       label: 'spot light 0 shadow map render pass',
     })
-
     metaballs.renderShadow(spotLightShadowPass)
     ground.renderShadow(spotLightShadowPass)
-
     spotLightShadowPass.end()
 
+    // ## Deferred pass
     const gBufferPass = commandEncoder.beginRenderPass({
       ...deferredPass.framebufferDescriptor,
       label: 'gbuffer',
@@ -210,12 +219,33 @@ import { ShadowDebugger } from './debug/shadow-debugger'
 
     gBufferPass.end()
 
+    // ## Copy pass
+    const copyRenderPass = commandEncoder.beginRenderPass({
+      ...copyPass.framebufferDescriptor,
+      label: 'copy pass',
+    })
+
+    deferredPass.render(copyRenderPass)
+
+    copyRenderPass.end()
+
+    // ## Bloom pass
+    const bloomRenderPass = commandEncoder.beginRenderPass({
+      ...bloomPass.framebufferDescriptor,
+      label: 'bloom pass',
+    })
+
+    bloomPass.render(bloomRenderPass)
+
+    bloomRenderPass.end()
+
+    // ## Final composite pass
     const renderPass = commandEncoder.beginRenderPass({
       label: 'draw default framebuffer',
       colorAttachments: [renderer.colorAttachment],
     })
 
-    deferredPass.render(renderPass)
+    resultPass.render(renderPass)
 
     renderPass.end()
 

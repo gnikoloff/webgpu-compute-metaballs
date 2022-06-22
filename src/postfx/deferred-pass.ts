@@ -113,8 +113,6 @@ export class DeferredPass extends Effect {
       ],
     })
 
-    console.log(spotLight)
-
     super(renderer, {
       fragmentShader: DeferredPassFragmentShader,
       bindGroupLayouts: [
@@ -129,6 +127,7 @@ export class DeferredPass extends Effect {
         spotLight.bindGroup.ubos,
         spotLight.bindGroup.depthTexture,
       ],
+      presentationFormat: 'rgba16float',
     })
 
     this.framebufferDescriptor = {

@@ -102,9 +102,7 @@ export class Metaballs {
         label: 'metaballs shadow rendering pipeline',
         layout: this.renderer.device.createPipelineLayout({
           label: 'metaballs shadow rendering pipeline layout',
-          bindGroupLayouts: [
-            this.spotLight.bindGroupLayout.ubos,
-          ],
+          bindGroupLayouts: [this.spotLight.bindGroupLayout.ubos],
         }),
         vertex: {
           entryPoint: 'main',

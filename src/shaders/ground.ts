@@ -1,4 +1,8 @@
-import { EncodeNormals, ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
+import {
+  GBufferEncode,
+  ProjectionUniformsStruct,
+  ViewUniformsStruct,
+} from './shared-chunks'
 
 export const GroundVertexShader = `
 	${ProjectionUniformsStruct}
@@ -54,25 +58,29 @@ export const GroundVertexShader = `
 `
 
 export const GroundFragmentShader = `
-	${EncodeNormals}
+	${GBufferEncode}
 
 	struct Inputs {
 		@location(0) normal: vec3<f32>,
 		@location(1) metallic: f32,
 		@location(2) roughness: f32,
 	}
-	struct Output {
-		@location(0) normal: vec4<f32>,	
-		@location(1) albedo: vec4<f32>,	
-	}
-
+	
 	@fragment
 	fn main(input: Inputs) -> Output {
-		var output: Output;
-		var normal = normalize(input.normal);
-		output.normal = vec4(encodeNormals(normal), input.metallic, 0.0);
-		output.albedo = vec4(1.0, 1.0, 1.0, input.roughness);
-		return output;
+		let normal = normalize(input.normal);
+		let albedo = vec3(1.0);
+		let metallic = input.metallic;
+		let roughness = input.roughness;
+		let ID = 0.0;
+
+		return encodeGBufferOutput(
+			normal,
+			albedo,
+			metallic,
+			roughness,
+			ID
+		);
 	}
 `
 

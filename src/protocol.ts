@@ -27,6 +27,8 @@ export interface IScreenEffect {
   fragmentShader: string
   bindGroupLayouts?: GPUBindGroupLayout[]
   bindGroups?: GPUBindGroup[]
+  presentationFormat?: GPUTextureFormat
+  label?: string
 }
 
 export interface ISpotLight {

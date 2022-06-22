@@ -37,7 +37,7 @@ export const ParticlesVertexShader = `
 	fn main(input: Inputs) -> Output {
 		var output: Output;		
 
-		let sc = lightsBuffer.lights[input.instanceIndex].intensity * 0.01;
+		let sc = clamp(lightsBuffer.lights[input.instanceIndex].intensity * 0.01, 0.01, 0.1);
 		let scaleMatrix = mat4x4(
 			sc,  0.0, 0.0, 0.0,
 			0.0, sc,  0.0, 0.0,

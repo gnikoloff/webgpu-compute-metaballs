@@ -9,11 +9,21 @@ export class Effect {
   private vertexBuffer: GPUBuffer
   private indexBuffer: GPUBuffer
 
+  private presentationFormat: GPUTextureFormat
+
   constructor(
     protected renderer: WebGPURenderer,
-    { fragmentShader, bindGroupLayouts = [], bindGroups = [] }: IScreenEffect,
+    {
+      fragmentShader,
+      bindGroupLayouts = [],
+      bindGroups = [],
+      label = 'fullscreen effect vertex buffer',
+      presentationFormat = renderer.presentationFormat,
+    }: IScreenEffect,
   ) {
     this.bindGroups = bindGroups
+
+    this.presentationFormat = presentationFormat
 
     // prettier-ignore
     const vertexData = new Float32Array([
@@ -30,7 +40,6 @@ export class Effect {
     this.vertexBuffer = renderer.device.createBuffer({
       size: vertexData.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-      label: 'fullscreen effect vertex buffer',
       mappedAtCreation: true,
     })
     new Float32Array(this.vertexBuffer.getMappedRange()).set(vertexData)
@@ -45,13 +54,17 @@ export class Effect {
     new Uint16Array(this.indexBuffer.getMappedRange()).set(indices)
     this.indexBuffer.unmap()
 
-    this.init(fragmentShader, bindGroupLayouts)
+    this.init(fragmentShader, bindGroupLayouts, label)
   }
-  async init(fragmentShader: string, bindGroupLayouts: GPUBindGroupLayout[]) {
+  async init(
+    fragmentShader: string,
+    bindGroupLayouts: GPUBindGroupLayout[],
+    label: string,
+  ) {
     this.renderPipeline = await this.renderer.device.createRenderPipeline({
-      label: 'fullscreen effect render pipeline',
+      label: label,
       layout: this.renderer.device.createPipelineLayout({
-        label: 'fullscreen effect render pipeline layout',
+        label: `${label} layout`,
         bindGroupLayouts: [...bindGroupLayouts],
       }),
       primitive: {
@@ -81,7 +94,7 @@ export class Effect {
         module: this.renderer.device.createShaderModule({
           code: fragmentShader,
         }),
-        targets: [{ format: this.renderer.presentationFormat }],
+        targets: [{ format: this.presentationFormat }],
       },
     })
   }

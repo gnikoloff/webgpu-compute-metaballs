@@ -257,31 +257,31 @@ export class MetaballsCompute {
 
     const speed = timeDelta * 0.014
 
-    const checkCollision = (ballA, i: number) => {
-      for (
-        let ballB, dx, dy, dist, min_dist, j = i + 1;
-        j < MAX_METABALLS;
-        j++
-      ) {
-        ballB = this.ballPositions[j]
-        dx = ballB.x - ballA.x
-        dy = ballB.y - ballA.y
-        dist = Math.sqrt(dx * dx + dy * dy)
-        min_dist = 1
+    // const checkCollision = (ballA, i: number) => {
+    //   for (
+    //     let ballB, dx, dy, dist, min_dist, j = i + 1;
+    //     j < MAX_METABALLS;
+    //     j++
+    //   ) {
+    //     ballB = this.ballPositions[j]
+    //     dx = ballB.x - ballA.x
+    //     dy = ballB.y - ballA.y
+    //     dist = Math.sqrt(dx * dx + dy * dy)
+    //     min_dist = 1
 
-        let spring = 0.01
-        if (dist < min_dist) {
-          var tx = ballA.x + (dx / dist) * min_dist,
-            ty = ballA.y + (dy / dist) * min_dist,
-            ax = (tx - ballB.x) * spring,
-            ay = (ty - ballB.y) * spring
-          ballA.vx -= ax
-          ballA.vy -= ay
-          ballB.vx += ax
-          ballB.vy += ay
-        }
-      }
-    }
+    //     let spring = 0.01
+    //     if (dist < min_dist) {
+    //       var tx = ballA.x + (dx / dist) * min_dist,
+    //         ty = ballA.y + (dy / dist) * min_dist,
+    //         ax = (tx - ballB.x) * spring,
+    //         ay = (ty - ballB.y) * spring
+    //       ballA.vx -= ax
+    //       ballA.vy -= ay
+    //       ballB.vx += ax
+    //       ballB.vy += ay
+    //     }
+    //   }
+    // }
 
     for (let i = 0; i < MAX_METABALLS; i++) {
       const pos = this.ballPositions[i]
@@ -290,11 +290,17 @@ export class MetaballsCompute {
       pos.vy += -pos.y * pos.speed * 0.1
       pos.vz += -pos.z * pos.speed * 0.1
 
-      checkCollision(pos, i)
+      // checkCollision(pos, i)
 
       pos.x += pos.vx * speed
       pos.y += pos.vy * speed
       pos.z += pos.vz * speed
+
+      // const step = (Math.PI * 2) / MAX_METABALLS
+      // pos.x = Math.cos(time * 0.1 + i * step + i) * 3
+      // pos.y = Math.sin(time * 0.1 + i * step) * 3
+      // pos.z = Math.sin(time * 0.1 + i * step) + Math.cos(time + i * step)
+      // pos.z += pos.vz * speed
 
       const padding = 0.8
       const width = Math.abs(this.volume.xMin) - padding
