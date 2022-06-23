@@ -114,7 +114,7 @@ export const DeferredPassFragmentShader = `
 				shadowPos.y >= 0.0 &&
 				shadowPos.y <= 1.0;
 			var visibility = 1.0;
-			if (inRange && projectedDepth <= posFromLight.z - 0.000006) {
+			if (inRange && projectedDepth <= posFromLight.z - 0.000009) {
 				visibility = 0.0;
 			}
 
@@ -161,7 +161,7 @@ export const DeferredPassFragmentShader = `
 			Lo += SpotLightRadiance(spotLight, surface) * visibility;
 
 			let ambient = vec3(0.01) * albedo.rgb;
-			let color = linearTosRGB(ambient + Lo);
+			let color = ambient + Lo;
 			output.color = vec4(color.rgb, 1.0);			
 
 			// ## Fog
@@ -170,20 +170,14 @@ export const DeferredPassFragmentShader = `
 			let fogDistance = length(worldPosition.xyz);
 			var fogAmount = 1.0 - exp2(-fogDensity * fogDensity * fogDistance * fogDistance * LOG2);
 			fogAmount = clamp(fogAmount, 0.0, 1.0);
-			let fogColor = vec4(0.1, 0.1, 0.1, 1.0);
+			let fogColor = vec4(vec3(0.015), 1.0);
 			output.color = mix(output.color, fogColor, fogAmount);
 			
-			// ## Debug views
-
-			// output.color = vec4(vec3(visibility), 1.0);
-			// output.color = vec4(shadowPos, 1.0);
-			// let ddd = textureLoad(spotLightDepthTexture, vec2<i32>(floor(input.coords.xy)), 0);
-			// output.color = vec4(vec3(LinearizeDepth(ddd)), 1.0);
 
 		} else if (0.1 - surface.ID < 0.01 && surface.ID < 0.1) {
 			output.color = vec4(albedo.rgb, 1.0);
 		} else {
-			output.color = vec4(0.1, 0.1, 0.1, 1.0);
+			output.color = vec4(vec3(0.015), 1.0);
 		}
 		return output;
 	}

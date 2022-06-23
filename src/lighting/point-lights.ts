@@ -46,7 +46,7 @@ export class PointLights {
       const b = Math.random()
 
       const radius = 5 + Math.random() * 3
-      const intensity = 100 + Math.random() * 180
+      const intensity = 10 + Math.random() * 100
 
       // position
       tmpVec4[0] = x
@@ -120,7 +120,7 @@ export class PointLights {
     this.init()
   }
 
-  async init() {
+  private async init() {
     this.updateComputePipeline =
       await this.renderer.device.createComputePipelineAsync({
         label: 'point light update compute pipeline',
@@ -140,7 +140,7 @@ export class PointLights {
       })
   }
 
-  updateSim(computePass: GPUComputePassEncoder): this {
+  public updateSim(computePass: GPUComputePassEncoder): this {
     if (!this.isReady) {
       return this
     }

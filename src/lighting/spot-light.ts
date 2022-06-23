@@ -1,6 +1,6 @@
 import { vec3 } from 'gl-matrix'
 import { PerspectiveCamera } from '../camera/perspective-camera'
-import { deg2Rad } from '../math/deg-to-rad'
+import { deg2Rad } from '../helpers/deg-to-rad'
 import { ISpotLight } from '../protocol'
 import { WebGPURenderer } from '../webgpu-renderer'
 

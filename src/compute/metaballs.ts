@@ -3,6 +3,7 @@ import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
 } from '../geometry/marching-cubes'
+// import { getText3DPositions } from '../helpers/get-text-3d-positions'
 import { IMetaballPos, IVolumeSettings } from '../protocol'
 import {
   MarchingCubesComputeSource,
@@ -34,6 +35,11 @@ export class MetaballsCompute {
   public indexBuffer: GPUBuffer
 
   public indexCount: number
+
+  private strength = 1
+  private strengthTarget = this.strength
+  private subtract = 1
+  private subtractTarget = this.subtract
 
   public get isReady(): boolean {
     return (
@@ -143,9 +149,9 @@ export class MetaballsCompute {
       x: (Math.random() * 2 - 1) * volume.xMin,
       y: (Math.random() * 2 - 1) * volume.yMin,
       z: (Math.random() * 2 - 1) * volume.zMin,
-      vx: (Math.random() * 2 - 1) * 1,
-      vy: (Math.random() * 2 - 1) * 1,
-      vz: (Math.random() * 2 - 1) * 1,
+      vx: Math.random() * 1000,
+      vy: (Math.random() * 2 - 1) * 10,
+      vz: Math.random() * 1000,
       speed: Math.random() * 2 + 0.3,
     }))
 
@@ -155,7 +161,7 @@ export class MetaballsCompute {
     this.init()
   }
 
-  async init() {
+  private async init() {
     this.computeMetaballsPipeline =
       await this.renderer.device.createComputePipelineAsync({
         layout: 'auto',
@@ -239,70 +245,46 @@ export class MetaballsCompute {
         },
       ],
     })
+
+    // this.labelsOffsets = new Float32Array([
+    //   ...getText3DPositions('Web', -50),
+    //   ...getText3DPositions('GPU', 50),
+    // ])
   }
 
-  updateSim(
+  public rearrange(): void {
+    this.subtractTarget = 3 + Math.random() * 3
+    this.strengthTarget = 3 + Math.random() * 3
+  }
+
+  public updateSim(
     computePass: GPUComputePassEncoder,
-    time: DOMHighResTimeStamp,
+    _time: DOMHighResTimeStamp,
     timeDelta: number,
   ): this {
     if (!this.isReady) {
       return this
     }
+
+    this.subtract += (this.subtractTarget - this.subtract) * timeDelta * 4
+    this.strength += (this.strengthTarget - this.strength) * timeDelta * 4
+
     const numblobs = MAX_METABALLS
-    const subtract = 10
-    const strength = 10
 
     this.metaballArrayHeader[0] = MAX_METABALLS
-
-    const speed = timeDelta * 0.014
-
-    // const checkCollision = (ballA, i: number) => {
-    //   for (
-    //     let ballB, dx, dy, dist, min_dist, j = i + 1;
-    //     j < MAX_METABALLS;
-    //     j++
-    //   ) {
-    //     ballB = this.ballPositions[j]
-    //     dx = ballB.x - ballA.x
-    //     dy = ballB.y - ballA.y
-    //     dist = Math.sqrt(dx * dx + dy * dy)
-    //     min_dist = 1
-
-    //     let spring = 0.01
-    //     if (dist < min_dist) {
-    //       var tx = ballA.x + (dx / dist) * min_dist,
-    //         ty = ballA.y + (dy / dist) * min_dist,
-    //         ax = (tx - ballB.x) * spring,
-    //         ay = (ty - ballB.y) * spring
-    //       ballA.vx -= ax
-    //       ballA.vy -= ay
-    //       ballB.vx += ax
-    //       ballB.vy += ay
-    //     }
-    //   }
-    // }
 
     for (let i = 0; i < MAX_METABALLS; i++) {
       const pos = this.ballPositions[i]
 
-      pos.vx += -pos.x * pos.speed * 0.1
-      pos.vy += -pos.y * pos.speed * 0.1
-      pos.vz += -pos.z * pos.speed * 0.1
+      pos.vx += -pos.x * pos.speed * 20
+      pos.vy += -pos.y * pos.speed * 20
+      pos.vz += -pos.z * pos.speed * 20
 
-      // checkCollision(pos, i)
+      pos.x += pos.vx * pos.speed * timeDelta * 0.0001
+      pos.y += pos.vy * pos.speed * timeDelta * 0.0001
+      pos.z += pos.vz * pos.speed * timeDelta * 0.0001
 
-      pos.x += pos.vx * speed
-      pos.y += pos.vy * speed
-      pos.z += pos.vz * speed
-
-      // const step = (Math.PI * 2) / MAX_METABALLS
-      // pos.x = Math.cos(time * 0.1 + i * step + i) * 3
-      // pos.y = Math.sin(time * 0.1 + i * step) * 3
-      // pos.z = Math.sin(time * 0.1 + i * step) + Math.cos(time + i * step)
-      // pos.z += pos.vz * speed
-
-      const padding = 0.8
+      const padding = 0.9
       const width = Math.abs(this.volume.xMin) - padding
       const height = Math.abs(this.volume.yMin) - padding
       const depth = Math.abs(this.volume.zMin) - padding
@@ -338,9 +320,11 @@ export class MetaballsCompute {
       this.metaballArrayBalls[offset] = position.x
       this.metaballArrayBalls[offset + 1] = position.y
       this.metaballArrayBalls[offset + 2] = position.z
-      this.metaballArrayBalls[offset + 3] = Math.sqrt(strength / subtract)
-      this.metaballArrayBalls[offset + 4] = strength
-      this.metaballArrayBalls[offset + 5] = subtract
+      this.metaballArrayBalls[offset + 3] = Math.sqrt(
+        this.strength / this.subtract,
+      )
+      this.metaballArrayBalls[offset + 4] = this.strength
+      this.metaballArrayBalls[offset + 5] = this.subtract
     }
 
     this.renderer.device.queue.writeBuffer(

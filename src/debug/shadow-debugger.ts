@@ -51,7 +51,7 @@ export class ShadowDebugger extends TextureDebuggerBase {
 		`
     this.init(fragmentShader)
   }
-  render(renderPass: GPURenderPassEncoder) {
+  public render(renderPass: GPURenderPassEncoder): void {
     if (!this.renderPipeline) {
       return
     }

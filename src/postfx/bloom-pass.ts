@@ -9,8 +9,8 @@ import { BloomBlurCompute } from '../shaders/bloom-blur-compute'
 export class BloomPass extends Effect {
   private static readonly TILE_DIM = 128
   private static readonly BATCH = [4, 4]
-  private static readonly FILTER_SIZE = 20
-  private static readonly ITERATIONS = 3
+  private static readonly FILTER_SIZE = 10
+  private static readonly ITERATIONS = 2
 
   public pointLights: PointLights
   public spotLight: SpotLight
@@ -191,7 +191,7 @@ export class BloomPass extends Effect {
     this.initComputePipeline()
   }
 
-  async initComputePipeline() {
+  private async initComputePipeline() {
     this.blurPipeline = await this.renderer.device.createComputePipelineAsync({
       label: 'bloom pass blur pipeline',
       layout: this.renderer.device.createPipelineLayout({

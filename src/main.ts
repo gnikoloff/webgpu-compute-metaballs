@@ -11,9 +11,10 @@ import { Metaballs } from './meshes/metaballs'
 import { BoxOutline } from './meshes/box-outline'
 import { Ground } from './meshes/ground'
 import { Particles } from './meshes/particles'
-import { ShadowDebugger } from './debug/shadow-debugger'
+// import { ShadowDebugger } from './debug/shadow-debugger'
 ;(async () => {
   let oldTime = 0
+  let rAf
 
   const adapter = await navigator.gpu?.requestAdapter()
 
@@ -28,7 +29,7 @@ import { ShadowDebugger } from './debug/shadow-debugger'
     0.1,
     100,
   )
-    .setPosition({ x: 10, y: 5, z: -12 })
+    .setPosition({ x: 10, y: 5, z: 12 })
     .lookAt({ x: 0, y: 0, z: 0 })
 
   // const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -100, 100)
@@ -42,9 +43,7 @@ import { ShadowDebugger } from './debug/shadow-debugger'
 
   // console.log(screenOrthoCamera)
 
-  new CameraController(perspCamera, document.body, true, 0.1).lookAt([0, 1, 0])
-
-  console.log(perspCamera)
+  new CameraController(perspCamera, document.body, false, 0.1).lookAt([0, 1, 0])
 
   const renderer = new WebGPURenderer(adapter)
   renderer.devicePixelRatio = devicePixelRatio
@@ -107,13 +106,13 @@ import { ShadowDebugger } from './debug/shadow-debugger'
 
     width: 100,
     height: 100,
-    depth: 75,
+    depth: 80,
 
     xStep: 0.075,
     yStep: 0.075,
     zStep: 0.075,
 
-    isoLevel: 200,
+    isoLevel: 20,
   }
 
   const deferredPass = new DeferredPass(renderer)
@@ -128,26 +127,28 @@ import { ShadowDebugger } from './debug/shadow-debugger'
     renderer,
     deferredPass.pointLights.lightsBuffer,
   )
-  const spotLightShadowDebugger = new ShadowDebugger(
-    renderer,
-    deferredPass.spotLight,
-  )
+  // const spotLightShadowDebugger = new ShadowDebugger(
+  //   renderer,
+  //   deferredPass.spotLight,
+  // )
 
-  // const gridHelper = new HelperGrid(renderer)
-  // const gltfModel = new GLTFModel(renderer)
+  setInterval(rearrange, 5000)
+  addEventListener('focus', onWindowFocus)
+  addEventListener('blur', onWindowBlur)
+  rAf = requestAnimationFrame(renderFrame)
 
-  // debug shadow map
-  // const debugShadowMesh = new ShadowMapDebugger(renderer)
-  //   .setPosition({
-  //     x: innerWidth / 2 - ShadowMapDebugger.OUTPUT_SIZE / 2,
-  //     y: -innerHeight / 2 + ShadowMapDebugger.OUTPUT_SIZE / 2,
-  //   })
-  //   .updateWorldMatrix()
+  function rearrange() {
+    deferredPass.rearrange()
+    metaballs.rearrange()
+  }
 
-  // GBuffer
-  // const deferredPass = new DeferredPass(renderer)
+  function onWindowBlur() {
+    cancelAnimationFrame(rAf)
+  }
 
-  requestAnimationFrame(renderFrame)
+  function onWindowFocus() {
+    rAf = requestAnimationFrame(renderFrame)
+  }
 
   function renderFrame(time: DOMHighResTimeStamp) {
     time /= 1000
@@ -194,7 +195,7 @@ import { ShadowDebugger } from './debug/shadow-debugger'
     // ## Run compute shaders
     const computePass = commandEncoder.beginComputePass()
     metaballs.updateSim(computePass, time, dt)
-    deferredPass.updateLightsSim(computePass, time)
+    deferredPass.updateLightsSim(computePass, time, dt)
     bloomPass.updateBloom(computePass)
     computePass.end()
 

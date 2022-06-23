@@ -56,7 +56,8 @@ export class Effect {
 
     this.init(fragmentShader, bindGroupLayouts, label)
   }
-  async init(
+
+  private async init(
     fragmentShader: string,
     bindGroupLayouts: GPUBindGroupLayout[],
     label: string,

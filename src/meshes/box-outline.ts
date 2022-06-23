@@ -242,7 +242,7 @@ export class BoxOutline {
     this.init()
   }
 
-  async init() {
+  private async init() {
     this.renderPipeline = await this.renderer.device.createRenderPipelineAsync({
       label: 'box outline render pipeline',
       layout: this.renderer.device.createPipelineLayout({

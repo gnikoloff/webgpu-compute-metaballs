@@ -281,6 +281,15 @@ export const LinearToSRGB = `
   }
 `
 
+export const sRGBToLinear = `
+  fn sRGBToLinear(srgb : vec3<f32>) -> vec3<f32> {
+    if (all(srgb <= vec3<f32>(0.04045, 0.04045, 0.04045))) {
+      return srgb / vec3<f32>(12.92, 12.92, 12.92);
+    }
+    return pow((srgb + vec3<f32>(0.055, 0.055, 0.055)) / vec3<f32>(1.055, 1.055, 1.055), vec3<f32>(2.4, 2.4, 2.4));
+  }
+`
+
 // Normal gbuffer encoding / decoding. Packs normals as xyz to 2 values only
 // Shamelessly stolen from https://aras-p.info/texts/CompactNormalStorage.html
 const EncodeNormals = `

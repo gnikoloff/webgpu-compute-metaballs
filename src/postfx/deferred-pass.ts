@@ -4,7 +4,7 @@ import { PointLights } from '../lighting/point-lights'
 import { SpotLight } from '../lighting/spot-light'
 import { DeferredPassFragmentShader } from '../shaders/deferred-pass'
 import { vec3 } from 'gl-matrix'
-import { deg2Rad } from '../math/deg-to-rad'
+import { deg2Rad } from '../helpers/deg-to-rad'
 
 export class DeferredPass extends Effect {
   public pointLights: PointLights
@@ -12,6 +12,7 @@ export class DeferredPass extends Effect {
   public framebufferDescriptor: GPURenderPassDescriptor
 
   private spotLightTarget = vec3.fromValues(0, 80, 0)
+  private spotLightColorTarget = vec3.fromValues(1, 1, 1)
 
   public get isReady(): boolean {
     return this.pointLights.isReady && !!this.renderPipeline
@@ -25,7 +26,7 @@ export class DeferredPass extends Effect {
       color: vec3.fromValues(1, 1, 1),
       cutOff: deg2Rad(1),
       outerCutOff: deg2Rad(4),
-      intensity: 3,
+      intensity: 8,
     })
 
     const gBufferTextureNormal = renderer.device.createTexture({
@@ -155,26 +156,37 @@ export class DeferredPass extends Effect {
 
     this.pointLights = pointLights
     this.spotLight = spotLight
+  }
 
-    setInterval(() => {
-      this.spotLightTarget[0] = (Math.random() * 2 - 1) * 3
-      this.spotLightTarget[2] = (Math.random() * 2 - 1) * 3
-    }, 2000)
+  public rearrange() {
+    this.spotLightTarget[0] = (Math.random() * 2 - 1) * 3
+    this.spotLightTarget[2] = (Math.random() * 2 - 1) * 3
+    this.spotLightColorTarget[0] = Math.random()
+    this.spotLightColorTarget[1] = Math.random()
+    this.spotLightColorTarget[2] = Math.random()
   }
 
   updateLightsSim(
     computePass: GPUComputePassEncoder,
-    time: DOMHighResTimeStamp,
+    _time: DOMHighResTimeStamp,
+    tiemDelta: number,
   ) {
     this.pointLights.updateSim(computePass)
     const spotLight = this.spotLight
+    const speed = tiemDelta * 2
     spotLight.position = vec3.fromValues(
       spotLight.position[0] +
-        (this.spotLightTarget[0] - spotLight.position[0]) * 0.1,
+        (this.spotLightTarget[0] - spotLight.position[0]) * speed,
       spotLight.position[1] +
-        (this.spotLightTarget[1] - spotLight.position[1]) * 0.1,
+        (this.spotLightTarget[1] - spotLight.position[1]) * speed,
       spotLight.position[2] +
-        (this.spotLightTarget[2] - spotLight.position[2]) * 0.1,
+        (this.spotLightTarget[2] - spotLight.position[2]) * speed,
+    )
+
+    this.spotLight.color = vec3.fromValues(
+      (this.spotLightColorTarget[0] - this.spotLight.color[0]) * speed * 4,
+      (this.spotLightColorTarget[1] - this.spotLight.color[1]) * speed * 4,
+      (this.spotLightColorTarget[2] - this.spotLight.color[2]) * speed * 4,
     )
     // this.spotLights.get(0).direction = vec3.fromValues(
     //   Math.cos(-time) * 0.1,

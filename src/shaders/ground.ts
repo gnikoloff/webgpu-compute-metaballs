@@ -70,9 +70,11 @@ export const GroundFragmentShader = `
 	fn main(input: Inputs) -> Output {
 		let normal = normalize(input.normal);
 		let albedo = vec3(1.0);
-		let metallic = input.metallic;
+		let metallic = 1.0;
 		let roughness = input.roughness;
 		let ID = 0.0;
+
+		
 
 		return encodeGBufferOutput(
 			normal,

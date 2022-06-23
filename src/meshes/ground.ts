@@ -2,7 +2,6 @@ import { mat4 } from 'gl-matrix'
 import { DEPTH_FORMAT } from '../constants'
 import { createCube } from '../geometry/create-box'
 import { SpotLight } from '../lighting/spot-light'
-import { SpotLights } from '../lighting/spot-lights'
 import {
   GroundFragmentShader,
   GroundShadowVertexShader,
@@ -69,10 +68,10 @@ export class Ground {
         instanceOffsets[i * 3 + 2] = Math.random() * 3 + 1
 
         // metallic
-        instanceMetallicRougness[i * 2 + 0] = Math.random() * 0.15 + 0.8
+        instanceMetallicRougness[i * 2 + 0] = 1
 
         // roughness
-        instanceMetallicRougness[i * 2 + 1] = Math.random() * 0.15 + 0.5
+        instanceMetallicRougness[i * 2 + 1] = 0.5
 
         i++
       }
@@ -137,7 +136,7 @@ export class Ground {
     this.init()
   }
 
-  async init() {
+  private async init() {
     this.renderPipeline = await this.renderer.device.createRenderPipelineAsync({
       label: 'ground render pipeline',
       layout: this.renderer.device.createPipelineLayout({

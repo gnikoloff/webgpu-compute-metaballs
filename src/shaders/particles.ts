@@ -17,7 +17,6 @@ export const ParticlesVertexShader = `
 	struct Inputs {
 		@builtin(vertex_index) vertexIndex: u32,
 		@builtin(instance_index) instanceIndex: u32,
-		@location(0) position: vec2<f32>,
 	}
 
 	struct Output {
@@ -27,15 +26,17 @@ export const ParticlesVertexShader = `
 	}
 
 	var<private> normalisedPosition: array<vec2<f32>, 4> = array<vec2<f32>, 4>(
-		vec2<f32>(-1.0, 1.0),
 		vec2<f32>(-1.0, -1.0),
 		vec2<f32>(1.0, -1.0),
+		vec2<f32>(-1.0, 1.0),
 		vec2<f32>(1.0, 1.0)
 	);
 
 	@vertex
 	fn main(input: Inputs) -> Output {
-		var output: Output;		
+		var output: Output;
+
+		let inputPosition = normalisedPosition[input.vertexIndex];
 
 		let sc = clamp(lightsBuffer.lights[input.instanceIndex].intensity * 0.01, 0.01, 0.1);
 		let scaleMatrix = mat4x4(
@@ -46,24 +47,26 @@ export const ParticlesVertexShader = `
 		);
 
 		let instancePosition = lightsBuffer.lights[input.instanceIndex].position;
-		var worldPosition = vec4(input.position, 0.0, 1.0);
-		worldPosition = scaleMatrix * worldPosition;
-
-		
-
-		worldPosition += vec4(instancePosition.xyz, 0.0);
+		var worldPosition = vec4(instancePosition.xyz, 0.0);
 
 		var viewMatrix = view.matrix;
 		
-
-		
 		output.position = projection.matrix *
-											viewMatrix *
-											worldPosition;
+											(
+												viewMatrix *
+												(worldPosition +
+												vec4(0.0, 0.0, 0.0, 1.0)) +
+												scaleMatrix * vec4(inputPosition, 0.0, 0.0)
+											);
+
+		// gl_Position = gl_ProjectionMatrix 
+		// * (gl_ModelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0) 
+		// + vec4(gl_Vertex.x, gl_Vertex.y, 0.0, 0.0));
+
 
 		let instanceColor = lightsBuffer.lights[input.instanceIndex].color;
 		output.color = instanceColor;
-		output.uv = normalisedPosition[input.vertexIndex] * vec2(0.5, -0.5) + vec2(0.5);
+		output.uv = inputPosition * vec2(0.5, -0.5) + vec2(0.5);
 		return output;
 	}
 `

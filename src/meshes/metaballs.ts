@@ -17,6 +17,17 @@ export class Metaballs {
   private renderPipeline!: GPURenderPipeline
   private renderShadowPipeline!: GPURenderPipeline
 
+  private ubo: GPUBuffer
+  private bindGroupLayout: GPUBindGroupLayout
+  private bindGroup: GPUBindGroup
+
+  private colorRGB = new Float32Array([1, 1, 1])
+  private colorTargetRGB = new Float32Array([...this.colorRGB])
+  private roughness = 0.3
+  private roughnessTarget = this.roughness
+  private metallic = 0.1
+  private metallicTarget = this.metallic
+
   public get isReady(): boolean {
     return (
       this.metaballsCompute.isReady &&
@@ -31,15 +42,54 @@ export class Metaballs {
     private spotLight: SpotLight,
   ) {
     this.metaballsCompute = new MetaballsCompute(renderer, volume)
+
+    this.ubo = this.renderer.device.createBuffer({
+      label: 'metaballs ubo',
+      mappedAtCreation: true,
+      size: 5 * Float32Array.BYTES_PER_ELEMENT,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    })
+    new Float32Array(this.ubo.getMappedRange()).set(
+      new Float32Array([1, 1, 1, 0.3, 0.1]),
+    )
+    this.ubo.unmap()
+
+    this.bindGroupLayout = this.renderer.device.createBindGroupLayout({
+      label: 'metaballs bind group layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          buffer: {},
+        },
+      ],
+    })
+
+    this.bindGroup = this.renderer.device.createBindGroup({
+      label: 'metaballs bind group',
+      layout: this.bindGroupLayout,
+      entries: [
+        {
+          binding: 0,
+          resource: {
+            buffer: this.ubo,
+          },
+        },
+      ],
+    })
+
     this.init()
   }
 
-  async init() {
+  private async init() {
     this.renderPipeline = await this.renderer.device.createRenderPipelineAsync({
       label: 'metaball rendering pipeline',
       layout: this.renderer.device.createPipelineLayout({
         label: 'metaball rendering pipeline layout',
-        bindGroupLayouts: [this.renderer.bindGroupsLayouts.frame],
+        bindGroupLayouts: [
+          this.renderer.bindGroupsLayouts.frame,
+          this.bindGroupLayout,
+        ],
       }),
       vertex: {
         entryPoint: 'main',
@@ -137,11 +187,47 @@ export class Metaballs {
       })
   }
 
+  public rearrange() {
+    this.colorTargetRGB[0] = Math.random()
+    this.colorTargetRGB[1] = Math.random()
+    this.colorTargetRGB[2] = Math.random()
+
+    this.metallicTarget = 0.08 + Math.random() * 0.92
+    this.roughnessTarget = 0.08 + Math.random() * 0.92
+
+    this.metaballsCompute.rearrange()
+  }
+
   public updateSim(
     computePass: GPUComputePassEncoder,
     time: number,
     timeDelta: number,
   ): this {
+    const colorSpeed = timeDelta * 2
+    this.colorRGB[0] += (this.colorTargetRGB[0] - this.colorRGB[0]) * colorSpeed
+    this.colorRGB[1] += (this.colorTargetRGB[1] - this.colorRGB[1]) * colorSpeed
+    this.colorRGB[2] += (this.colorTargetRGB[2] - this.colorRGB[2]) * colorSpeed
+
+    const materialSpeed = timeDelta * 3
+    this.metallic += (this.metallicTarget - this.metallic) * materialSpeed
+    this.roughness += (this.roughnessTarget - this.roughness) * materialSpeed
+
+    this.renderer.device.queue.writeBuffer(
+      this.ubo,
+      0 * Float32Array.BYTES_PER_ELEMENT,
+      this.colorRGB,
+    )
+    this.renderer.device.queue.writeBuffer(
+      this.ubo,
+      3 * Float32Array.BYTES_PER_ELEMENT,
+      new Float32Array([this.roughness]),
+    )
+    this.renderer.device.queue.writeBuffer(
+      this.ubo,
+      4 * Float32Array.BYTES_PER_ELEMENT,
+      new Float32Array([this.metallic]),
+    )
+
     this.metaballsCompute.updateSim(computePass, time, timeDelta)
     return this
   }
@@ -164,6 +250,7 @@ export class Metaballs {
     }
     renderPass.setPipeline(this.renderPipeline)
     renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
+    renderPass.setBindGroup(1, this.bindGroup)
     renderPass.setVertexBuffer(0, this.metaballsCompute.vertexBuffer)
     renderPass.setVertexBuffer(1, this.metaballsCompute.normalBuffer)
     renderPass.setIndexBuffer(this.metaballsCompute.indexBuffer, 'uint32')

@@ -3,7 +3,11 @@ import {
   MarchingCubesEdgeTable,
   MarchingCubesTriTable,
 } from '../geometry/marching-cubes'
-import { GBufferEncode, ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
+import {
+  GBufferEncode,
+  ProjectionUniformsStruct,
+  ViewUniformsStruct,
+} from './shared-chunks'
 
 export const IsosurfaceVolume = `
   struct IsosurfaceVolume {
@@ -286,6 +290,14 @@ export const MetaballsVertexShader = `
 export const MetaballsFragmentShader = `
     ${GBufferEncode}
 
+    struct Uniforms {
+      color: vec3<f32>,
+      roughness: f32,
+      metallic: f32,
+    }
+
+    @group(1) @binding(0) var<uniform> ubo: Uniforms;
+
     struct Inputs {
       @location(0) normal: vec3<f32>,
     }
@@ -293,9 +305,9 @@ export const MetaballsFragmentShader = `
     @fragment
     fn main(input: Inputs) -> Output {
 			let normal = normalize(input.normal);
-      let albedo = vec3(1.0);
-      let metallic = 1.0;
-      let roughness = 0.5;
+      let albedo = ubo.color;
+      let metallic = ubo.metallic;
+      let roughness = ubo.roughness;
 			let ID = 0.0;
 			return encodeGBufferOutput(
         normal,
