@@ -12,10 +12,87 @@
         overflow: hidden;
         width: 100vw;
         height: 100vh;
+        line-height: 1.6;
+        color: white;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
       }
+      iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+      h1 {
+        margin-top: 0;
+        margin-bottom: 2rem;
+        font-size: 1.4rem;
+        text-align: center;
+      }
+      p {
+        color: rgba(255, 255, 255, 0.86);
+      }
+      a {
+        color: inherit;
+      }
+      #chrome-warning {
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        background: #181818;
+        overflow: auto;
+      }
+      #content-contianer {
+        max-width: 700px;
+        width: 100%;
+        margin: 4rem auto;
+      }
+      #iframe-wrapper {
+        position: relative;
+        padding-bottom: 56.25%;
+      }
+
     </style>
   </head>
   <body>
+    <div id="chrome-warning" style="display: none;">
+      <div id="content-contianer">
+        <h1>Uh oh, WebGPU is not available in this browser :(</h1>
+        <div id="non-chrome-text" style="display: none;">
+          <p>
+            You are using a browser that does not support the latest WebGPU spec.
+            <br />
+            <br />
+            While Safari and Firefox support WebGPU, they are currently not keeping up with the latest changes in the specification.
+            <br />
+            <br />
+            Read more about the required steps to run WebGPU <a href="https://github.com/gpuweb/gpuweb/wiki/Implementation-Status#chromium-chrome-edge-etc" target="_blank">here</a>.
+          </p>
+        </div>
+        <div id="outdated-chrome-text" style="display: none;">
+          <p>
+            Your Chrome appears to be outdated or you haven't enabled <code>chrome://flags/#enable-unsafe-webgpu</code> flag.
+            <br />
+            <br />
+            Read more about the required steps to enable WebGPU in your Google Chrome <a href="https://github.com/gpuweb/gpuweb/wiki/Implementation-Status#chromium-chrome-edge-etc" target="_blank">here</a>.
+          </p>
+        </div>
+        <div id="iframe-wrapper">
+          <iframe
+            title="WebGPU Compute Metaballs YouTube video"
+            width="1080"
+            height="720"
+            src="https://www.youtube.com/embed/5aBFOyCNakw"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <p style="color: rgba(255, 255, 255, 0.6)">In the meantime, please enjoy this recorded video of the demo running realtime on a Mac Studio M1 Max.</p>
+      </div>
+    </div>
     <div id="app"></div>
 
     <script type="module" src="/src/main.ts"></script>

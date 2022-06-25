@@ -20,7 +20,9 @@ export class WebGPURenderer {
   defaultSampler: GPUSampler
 
   get presentationFormat(): GPUTextureFormat {
-    return navigator.gpu.getPreferredCanvasFormat()
+    return navigator.gpu?.getPreferredCanvasFormat
+      ? navigator.gpu?.getPreferredCanvasFormat()
+      : 'bgra8unorm'
   }
 
   set outputSize(size: [number, number]) {
@@ -28,8 +30,9 @@ export class WebGPURenderer {
     this.#outputSize = size
     this.canvas.width = w
     this.canvas.height = h
-    this.canvas.style.setProperty('width', `${w}px`)
-    this.canvas.style.setProperty('height', `${h}px`)
+    const delta = innerWidth / w
+    this.canvas.style.setProperty('width', `${w * delta}px`)
+    this.canvas.style.setProperty('height', `${h * delta}px`)
   }
 
   get outputSize(): [number, number] {

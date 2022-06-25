@@ -26,7 +26,7 @@ export const UpdatePointLightsComputeShader = `
 		lightsBuffer.lights[index].position.x += lightsBuffer.lights[index].velocity.x * view.deltaTime;
 		lightsBuffer.lights[index].position.z += lightsBuffer.lights[index].velocity.z * view.deltaTime;
 		
-		let size = 30.0;
+		let size = 42.0;
 		let halfSize = size / 2.0;
 		
 		if (lightsBuffer.lights[index].position.x < -halfSize) {

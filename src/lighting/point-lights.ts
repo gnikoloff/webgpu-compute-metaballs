@@ -3,7 +3,7 @@ import { UpdatePointLightsComputeShader } from '../shaders/point-lights-compute'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class PointLights {
-  public static readonly MAX_LIGHTS_COUNT = 32
+  public static readonly MAX_LIGHTS_COUNT = 16
 
   private lightsBufferComputeBindGroupLayout: GPUBindGroupLayout
   private lightsBufferComputeBindGroup: GPUBindGroup
@@ -37,16 +37,16 @@ export class PointLights {
       const y = -2
       const z = (Math.random() * 2 - 1) * 20
 
-      const velX = Math.random() * 2
-      const velY = Math.random() * 2
-      const velZ = Math.random() * 2
+      const velX = Math.random() * 4 - 2
+      const velY = Math.random() * 4 - 2
+      const velZ = Math.random() * 4 - 2
 
       const r = Math.random()
       const g = Math.random()
       const b = Math.random()
 
       const radius = 5 + Math.random() * 3
-      const intensity = 10 + Math.random() * 100
+      const intensity = 10 + Math.random() * 10
 
       // position
       tmpVec4[0] = x

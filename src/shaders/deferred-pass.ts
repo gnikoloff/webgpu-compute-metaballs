@@ -170,14 +170,14 @@ export const DeferredPassFragmentShader = `
 			let fogDistance = length(worldPosition.xyz);
 			var fogAmount = 1.0 - exp2(-fogDensity * fogDensity * fogDistance * fogDistance * LOG2);
 			fogAmount = clamp(fogAmount, 0.0, 1.0);
-			let fogColor = vec4(vec3(0.015), 1.0);
+			let fogColor = vec4(vec3(0.005), 1.0);
 			output.color = mix(output.color, fogColor, fogAmount);
 			
 
 		} else if (0.1 - surface.ID < 0.01 && surface.ID < 0.1) {
 			output.color = vec4(albedo.rgb, 1.0);
 		} else {
-			output.color = vec4(vec3(0.015), 1.0);
+			output.color = vec4(vec3(0.005), 1.0);
 		}
 		return output;
 	}

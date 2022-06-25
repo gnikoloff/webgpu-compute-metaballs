@@ -41,6 +41,8 @@ export class MetaballsCompute {
   private subtract = 1
   private subtractTarget = this.subtract
 
+  // private labelsOffsets: Float32Array
+
   public get isReady(): boolean {
     return (
       !!this.computeMarchingCubesPipeline && !!this.computeMetaballsPipeline
@@ -247,8 +249,8 @@ export class MetaballsCompute {
     })
 
     // this.labelsOffsets = new Float32Array([
-    //   ...getText3DPositions('Web', -50),
-    //   ...getText3DPositions('GPU', 50),
+    //   ...getText3DPositions('Web', -60),
+    //   ...getText3DPositions('GPU', 60),
     // ])
   }
 
@@ -283,6 +285,11 @@ export class MetaballsCompute {
       pos.x += pos.vx * pos.speed * timeDelta * 0.0001
       pos.y += pos.vy * pos.speed * timeDelta * 0.0001
       pos.z += pos.vz * pos.speed * timeDelta * 0.0001
+
+      // pos.x = this.labelsOffsets[i * 3 + 0] * 10
+      // pos.y = this.labelsOffsets[i * 3 + 1] * 10
+      // pos.z =
+      //   this.labelsOffsets[i * 3 + 2] * 20 + Math.sin(_time + pos.x * 1) * 0.5
 
       const padding = 0.9
       const width = Math.abs(this.volume.xMin) - padding

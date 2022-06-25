@@ -11,11 +11,44 @@ import { Metaballs } from './meshes/metaballs'
 import { BoxOutline } from './meshes/box-outline'
 import { Ground } from './meshes/ground'
 import { Particles } from './meshes/particles'
+import { getChromeVersion } from './helpers/get-chrome-version'
 // import { ShadowDebugger } from './debug/shadow-debugger'
-;(async () => {
-  let oldTime = 0
-  let rAf
 
+let oldTime = 0
+let rAf
+
+document.addEventListener('DOMContentLoaded', initApp)
+
+function initApp() {
+  const isChrome = getChromeVersion() > -1
+  const hasWebGPU = !!navigator.gpu
+  if (!isChrome) {
+    showChromeOnlyWarning()
+  }
+  if (!hasWebGPU) {
+    showChromeOnlyWarning(true, false)
+  }
+  startDemo()
+}
+
+function showChromeOnlyWarning(isChrome = false, hasWebGPU = true) {
+  const $warningWrapper = document.getElementById('chrome-warning')
+  const $nonChromeMessage = document.getElementById('non-chrome-text')
+  const $outdatedChromeMessage = document.getElementById('outdated-chrome-text')
+
+  $warningWrapper.style.setProperty('display', 'block')
+
+  if (!isChrome) {
+    $nonChromeMessage.style.removeProperty('display')
+    throw new Error('Demo runs on up-to-date chromium browsers only!')
+  }
+  if (!hasWebGPU) {
+    $outdatedChromeMessage.style.removeProperty('display')
+    throw new Error('Demo runs on up-to-date chromium browsers only!')
+  }
+}
+
+async function startDemo() {
   const adapter = await navigator.gpu?.requestAdapter()
 
   if (!adapter) {
@@ -29,19 +62,8 @@ import { Particles } from './meshes/particles'
     0.1,
     100,
   )
-    .setPosition({ x: 10, y: 5, z: 12 })
+    .setPosition({ x: 10, y: 2, z: 16 })
     .lookAt({ x: 0, y: 0, z: 0 })
-
-  // const shadowCamera = new OrthographicCamera(-50, 50, -50, 50, -100, 100)
-  //   .setPosition({ x: -4.1, y: 40, z: 0 })
-  //   .lookAt({ x: 0, y: 0, z: 0 })
-
-  // const screenOrthoCamera = new OrthographicCamera(-2, 2, 2, -2, 0, 2)
-  //   .setPosition({ x: 0, y: 0, z: 1 })
-  //   .lookAt({ x: 0, y: 0, z: 0 })
-  //   .updateViewMatrix()
-
-  // console.log(screenOrthoCamera)
 
   new CameraController(perspCamera, document.body, false, 0.1).lookAt([0, 1, 0])
 
@@ -252,4 +274,4 @@ import { Particles } from './meshes/particles'
 
     renderer.device.queue.submit([commandEncoder.finish()])
   }
-})()
+}

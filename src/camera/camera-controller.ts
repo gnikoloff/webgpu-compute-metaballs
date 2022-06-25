@@ -37,15 +37,15 @@ export class CameraController {
   private minDistance = 0
   private maxDistance = Infinity
   private isEnabled = true
-  // private isDamping: boolean
-  // private dampingFactor: number
-  // private isZoom: boolean
-  // private zoomSpeed: number
-  // private isRotate: boolean
-  // private rotateSpeed: number
-  // private isPan: boolean
-  // private keyPanSpeed: number
-  // private enableKeys: boolean
+  private isDamping: boolean
+  private dampingFactor: number
+  private isZoom: boolean
+  private zoomSpeed: number
+  private isRotate: boolean
+  private rotateSpeed: number
+  private isPan: boolean
+  private keyPanSpeed: number
+  private enableKeys: boolean
   private keys: {
     LEFT: string
     UP: string
@@ -53,7 +53,7 @@ export class CameraController {
     BOTTOM: string
     SHIFT: string
   }
-  // private originTarget: vec3
+  private originTarget: vec3
   private originPosition: vec3
   private targetXDampedAction: DampedAction = new DampedAction()
   private targetYDampedAction: DampedAction = new DampedAction()
@@ -82,7 +82,7 @@ export class CameraController {
   private _zoomDistanceEnd = 0
   private _zoomDistance = 0
   private state = ''
-  // private loopId = 0
+  private loopId = 0
   private _panStart = { x: 0, y: 0 }
   private _panDelta = { x: 0, y: 0 }
   private _panEnd = { x: 0, y: 0 }
@@ -105,26 +105,26 @@ export class CameraController {
     this.camera = camera
     this.domElement = domElement
 
-    // // Set to true to enable damping (inertia)
-    // // If damping is enabled, you must call controls.update() in your animation loop
-    // this.isDamping = false
-    // this.dampingFactor = 0.25
+    // Set to true to enable damping (inertia)
+    // If damping is enabled, you must call controls.update() in your animation loop
+    this.isDamping = false
+    this.dampingFactor = 0.25
 
-    // // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
-    // // Set to false to disable zooming
-    // this.isZoom = true
-    // this.zoomSpeed = 1.0
+    // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
+    // Set to false to disable zooming
+    this.isZoom = true
+    this.zoomSpeed = 1.0
 
-    // // Set to false to disable rotating
-    // this.isRotate = true
-    // this.rotateSpeed = 1.0
+    // Set to false to disable rotating
+    this.isRotate = true
+    this.rotateSpeed = 1.0
 
-    // // Set to false to disable panning
-    // this.isPan = true
-    // this.keyPanSpeed = 7.0 // pixels moved per arrow key push
+    // Set to false to disable panning
+    this.isPan = true
+    this.keyPanSpeed = 7.0 // pixels moved per arrow key push
 
-    // // Set to false to disable use of the keys
-    // this.enableKeys = true
+    // Set to false to disable use of the keys
+    this.enableKeys = true
 
     // The four arrow keys
     this.keys = {
@@ -136,7 +136,7 @@ export class CameraController {
     }
 
     // for reset
-    // this.originTarget = vec3.create()
+    this.originTarget = vec3.create()
     this.originPosition = vec3.create()
     this.originPosition[0] = camera.position[0]
     this.originPosition[1] = camera.position[0]
@@ -238,7 +238,7 @@ export class CameraController {
     window.removeEventListener('keydown', this._onKeyUpHandler, false)
   }
   startTick(): void {
-    // this.loopId = requestAnimationFrame(this.tick)
+    this.loopId = requestAnimationFrame(this.tick)
   }
   pause(): void {
     this._paused = true
@@ -258,7 +258,7 @@ export class CameraController {
         this._outputEl.textContent = `x: ${cameraX} y: ${cameraY} z: ${cameraZ}`
       }
     }
-    requestAnimationFrame(this.tick)
+    this.loopId = requestAnimationFrame(this.tick)
   }
   updateDampedAction(): void {
     this.target[0] += this.targetXDampedAction.update()
