@@ -54,7 +54,7 @@ export const MetaballFieldComputeSource = `
     return result;
   }
 
-  @compute @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
+  @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let position = positionAt(global_id);
     let valueIndex = global_id.x +
@@ -170,7 +170,7 @@ export const MarchingCubesComputeSource = `
     cubeVerts = cubeVerts + 1u;
   }
 
-  @compute @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
+  @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     
     let i0 = global_id;
@@ -275,7 +275,7 @@ export const MetaballsVertexShader = `
       @builtin(position) position: vec4<f32>,
     }
 
-    @vertex
+    @stage(vertex)
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *
@@ -302,7 +302,7 @@ export const MetaballsFragmentShader = `
       @location(0) normal: vec3<f32>,
     }
 		
-    @fragment
+    @stage(fragment)
     fn main(input: Inputs) -> Output {
 			let normal = normalize(input.normal);
       let albedo = ubo.color;
@@ -334,7 +334,7 @@ export const MetaballsShadowVertexShader = `
       @builtin(position) position: vec4<f32>,
     }
 
-    @vertex
+    @stage(vertex)
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *

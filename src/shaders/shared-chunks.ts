@@ -96,7 +96,7 @@ export const EffectVertexShader = `
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@vertex
+	@stage(vertex)
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		output.position = vec4(input.position, 0.0, 1.0);

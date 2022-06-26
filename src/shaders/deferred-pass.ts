@@ -64,7 +64,7 @@ export const DeferredPassFragmentShader = `
 	${LinearToSRGB}
 	${LinearizeDepthSnippet}
 
-	@fragment
+	@stage(fragment)
 	fn main(input: Inputs) -> Output {
 		// ## Reconstruct world position from depth buffer
 

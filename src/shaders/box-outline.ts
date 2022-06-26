@@ -1,4 +1,8 @@
-import { GBufferEncode, ProjectionUniformsStruct, ViewUniformsStruct } from './shared-chunks'
+import {
+  GBufferEncode,
+  ProjectionUniformsStruct,
+  ViewUniformsStruct,
+} from './shared-chunks'
 
 export const BoxOutlineVertexShader = `
 	${ProjectionUniformsStruct}
@@ -20,7 +24,7 @@ export const BoxOutlineVertexShader = `
 		@location(0) localPosition: vec3<f32>,
 	}
 
-	@vertex
+	@stage(vertex)
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 
@@ -53,7 +57,7 @@ export const BoxOutlineFragmentShader = `
 	@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
 	@group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
 
-	@fragment
+	@stage(fragment)
 	fn main(input: Input) -> Output {
 		var output: Output;
 		let spacing = step(sin(input.localPosition.x * 10.0 + view.time * 2.0), 0.1);
