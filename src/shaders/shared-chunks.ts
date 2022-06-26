@@ -262,8 +262,8 @@ export const ReconstructWorldPosFromDepth = `
   ) -> vec4<f32> {
     let uv = coords.xy / projection.outputSize;
     var depth = textureLoad(depthTexture, vec2<i32>(floor(coords)), 0);
-		let x = uv.x * 2 - 1;
-		let y = (1 - uv.y) * 2 - 1;
+		let x = uv.x * 2.0 - 1.0;
+		let y = (1.0 - uv.y) * 2.0 - 1.0;
 		let projectedPos = vec4(x, y, depth, 1.0);
 		var worldPosition = projInverse * projectedPos;
 		worldPosition = vec4(worldPosition.xyz / worldPosition.w, 1.0);
@@ -294,17 +294,17 @@ export const sRGBToLinear = `
 // Shamelessly stolen from https://aras-p.info/texts/CompactNormalStorage.html
 const EncodeNormals = `
   fn encodeNormals(n: vec3<f32>) -> vec2<f32> {
-    let p = sqrt(n.z * 8 + 8);
+    let p = sqrt(n.z * 8.0 + 8.0);
     return vec2(n.xy / p + 0.5);
   }
 `
 
 export const DecodeNormals = `
   fn decodeNormals(enc: vec2<f32>) -> vec3<f32> {
-    let fenc = enc * 4 - 2;
+    let fenc = enc * 4.0 - 2.0;
     let f = dot(fenc, fenc);
-    let g = sqrt(1-f/4);
-    return vec3(fenc*g, 1-f/2);
+    let g = sqrt(1.0 - f / 4.0);
+    return vec3(fenc*g, 1.0 - f / 2.0);
   }
 `
 
