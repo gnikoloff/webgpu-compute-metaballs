@@ -37,14 +37,23 @@ export class CameraController {
   private minDistance = 0
   private maxDistance = Infinity
   private isEnabled = true
+  // @ts-ignore
   private isDamping: boolean
+  // @ts-ignore
   private dampingFactor: number
+  // @ts-ignore
   private isZoom: boolean
+  // @ts-ignore
   private zoomSpeed: number
+  // @ts-ignore
   private isRotate: boolean
+  // @ts-ignore
   private rotateSpeed: number
+  // @ts-ignore
   private isPan: boolean
+  // @ts-ignore
   private keyPanSpeed: number
+  // @ts-ignore
   private enableKeys: boolean
   private keys: {
     LEFT: string
@@ -53,6 +62,7 @@ export class CameraController {
     BOTTOM: string
     SHIFT: string
   }
+  // @ts-ignore
   private originTarget: vec3
   private originPosition: vec3
   private targetXDampedAction: DampedAction = new DampedAction()
@@ -82,6 +92,7 @@ export class CameraController {
   private _zoomDistanceEnd = 0
   private _zoomDistance = 0
   private state = ''
+  // @ts-ignore
   private loopId = 0
   private _panStart = { x: 0, y: 0 }
   private _panDelta = { x: 0, y: 0 }

@@ -5,7 +5,6 @@ import { SpotLight } from '../lighting/spot-light'
 import { CopyPass } from './copy-pass'
 import { BloomPassFragmentShader } from '../shaders/bloom-pass'
 import { BloomBlurCompute } from '../shaders/bloom-blur-compute'
-import SETTINGS from '../settings'
 
 export class BloomPass extends Effect {
   private static readonly TILE_DIM = 128

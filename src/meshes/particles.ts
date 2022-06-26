@@ -1,4 +1,3 @@
-import { PointLights } from '../lighting/point-lights'
 import { DEPTH_FORMAT } from '../constants'
 import {
   ParticlesFragmentShader,

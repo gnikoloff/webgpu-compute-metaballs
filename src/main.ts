@@ -1,6 +1,6 @@
 import * as dat from 'dat.gui'
 
-import { IVolumeSettings, QualityOption, QualitySettings } from './protocol'
+import { IVolumeSettings, QualitySettings } from './protocol'
 import { WebGPURenderer } from './webgpu-renderer'
 import { PerspectiveCamera } from './camera/perspective-camera'
 import { CameraController } from './camera/camera-controller'

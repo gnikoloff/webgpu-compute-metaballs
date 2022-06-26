@@ -13,7 +13,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
-    "typeRoots": ["node", "./node_modules/@webgpu/types"]
+    "typeRoots": ["node", "./node_modules/@webgpu/types"],
   },
-  "include": ["./src", "vite.config.js"]
+  "include": ["./src", "vite.config.js"],
 }

@@ -2,96 +2,28 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
-    <style>
-      body {
-        padding: 0;
-        margin: 0;
-        overflow: hidden;
-        width: 100vw;
-        height: 100vh;
-        line-height: 1.6;
-        color: white;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-      }
-      iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-      }
-      h1 {
-        margin-top: 0;
-        margin-bottom: 2rem;
-        font-size: 1.4rem;
-      }
-      p {
-        color: rgba(255, 255, 255, 0.86);
-      }
-      a {
-        color: inherit;
-      }
-      #chrome-warning,
-      #quality-chooser {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        background: #181818;
-        overflow: auto;
-      }
-      #chrome-warning {
-        z-index: 1;
-      }
-      #quality-chooser {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      #quality-buttons-wrapper {
-        padding: 0;
-        list-style: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      #quality-buttons-wrapper li {
-        margin-right: 1rem;
-      }
-      #quality-buttons-wrapper button {
-        padding: 8px 26px;
-        background: none;
-        border: 1px solid white;
-        color: white;
-        cursor: pointer;
-        transition: color 0.12s ease,
-                    background 0.12s ease;
-      }
-      #quality-buttons-wrapper button:hover {
-        background: white;
-        color: black;
-      }
-      #quality-buttons-wrapper li:last-of-type {
-        margin-right: 0;
-      }
-      #content-contianer {
-        max-width: 700px;
-        width: 100%;
-        margin: 4rem auto;
-        padding-left: 1.5rem;
-        padding-right: 1.5rem;
-        box-sizing: border-box;
-      }
-      #iframe-wrapper {
-        position: relative;
-        padding-bottom: 56.25%;
-      }
+    
+    <!-- Primary Meta Tags -->
+    <title>WebGPU Compute Metaballs</title>
+    <meta name="title" content="WebGPU Compute Metaballs">
+    <meta name="description" content="This WebGPU demo features a marching cubes and bloom post-processing via compute shaders, physically based shading, deferred rendering, gamma correction and shadow mapping.">
 
-    </style>
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://metatags.io/">
+    <meta property="og:title" content="WebGPU Compute Metaballs">
+    <meta property="og:description" content="This WebGPU demo features a marching cubes and bloom post-processing via compute shaders, physically based shading, deferred rendering, gamma correction and shadow mapping.">
+    <meta property="og:image" content="https://metatags.io/assets/meta-tags-16a33a6a8531e519cc0936fbba0ad904e52d35f34a46c97a2c9f6f7dd7d336f2.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://metatags.io/">
+    <meta property="twitter:title" content="WebGPU Compute Metaballs">
+    <meta property="twitter:description" content="This WebGPU demo features a marching cubes and bloom post-processing via compute shaders, physically based shading, deferred rendering, gamma correction and shadow mapping.">
+    <meta property="twitter:image" content="https://metatags.io/assets/meta-tags-16a33a6a8531e519cc0936fbba0ad904e52d35f34a46c97a2c9f6f7dd7d336f2.png">
+
+    <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
     <div id="chrome-warning" style="display: none;">
