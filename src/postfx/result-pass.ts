@@ -20,7 +20,7 @@ export class ResultPass extends Effect {
   constructor(
     renderer: WebGPURenderer,
     copyPass: CopyPass,
-    bloomPass: BloomPass,
+    bloomPass?: BloomPass,
   ) {
     const bindGroupLayout = renderer.device.createBindGroupLayout({
       label: 'result pass bind group layout',
@@ -38,6 +38,15 @@ export class ResultPass extends Effect {
       ],
     })
 
+    const emptyTex = renderer.device
+      .createTexture({
+        size: [1, 1],
+        dimension: '2d',
+        format: 'bgra8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING,
+      })
+      .createView()
+
     const bindGroup = renderer.device.createBindGroup({
       label: 'result pass bind group',
       layout: bindGroupLayout,
@@ -48,7 +57,9 @@ export class ResultPass extends Effect {
         },
         {
           binding: 1,
-          resource: bloomPass.blurTextures[1].createView(),
+          resource: bloomPass
+            ? bloomPass.blurTextures[1].createView()
+            : emptyTex,
         },
       ],
     })

@@ -5,18 +5,20 @@ export const QUALITIES: Map<QualitySettings, QualityOption> = new Map([
     QualitySettings.LOW,
     {
       bloomToggle: false,
-      shadowRes: 128,
-      pointLightsCount: 16,
-      outputScale: 0.5,
+      shadowRes: 512,
+      pointLightsCount: 32,
+      outputScale: 1,
+      updateMetaballs: false,
     },
   ],
   [
     QualitySettings.MEDIUM,
     {
       bloomToggle: true,
-      shadowRes: 256,
+      shadowRes: 512,
       pointLightsCount: 32,
-      outputScale: 1,
+      outputScale: 0.8,
+      updateMetaballs: true,
     },
   ],
   [
@@ -26,6 +28,7 @@ export const QUALITIES: Map<QualitySettings, QualityOption> = new Map([
       shadowRes: 512,
       pointLightsCount: 128,
       outputScale: 1,
+      updateMetaballs: true,
     },
   ],
 ])

@@ -41,7 +41,7 @@ export class MetaballsCompute {
   private subtract = 1
   private subtractTarget = this.subtract
 
-  // private labelsOffsets: Float32Array
+  public hasCalcedOnce = false
 
   public get isReady(): boolean {
     return (
@@ -364,6 +364,8 @@ export class MetaballsCompute {
       computePass.setBindGroup(0, this.computeMarchingCubesBindGroup)
       computePass.dispatchWorkgroups(...dispatchSize)
     }
+
+    this.hasCalcedOnce = true
 
     return this
   }

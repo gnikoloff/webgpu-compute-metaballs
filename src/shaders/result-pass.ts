@@ -30,7 +30,7 @@ export const ResultPassFragmentShader = `
 
 
     var result = vec3(1.0) - exp(-hdrColor.rgb * 1.0);
-    result = linearTosRGB(result);
+    // result = linearTosRGB(result);
 
     output.color = vec4(result, 1.0);
     // output.color = vec4(bloomColor.rgba);

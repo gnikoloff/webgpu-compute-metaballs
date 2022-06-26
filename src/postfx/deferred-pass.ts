@@ -5,6 +5,7 @@ import { SpotLight } from '../lighting/spot-light'
 import { DeferredPassFragmentShader } from '../shaders/deferred-pass'
 import { vec3 } from 'gl-matrix'
 import { deg2Rad } from '../helpers/deg-to-rad'
+import { SETTINGS } from '../settings'
 
 export class DeferredPass extends Effect {
   public pointLights: PointLights
@@ -26,7 +27,7 @@ export class DeferredPass extends Effect {
       color: vec3.fromValues(1, 1, 1),
       cutOff: deg2Rad(1),
       outerCutOff: deg2Rad(4),
-      intensity: 8,
+      intensity: 40,
     })
 
     const gBufferTextureNormal = renderer.device.createTexture({
@@ -128,7 +129,9 @@ export class DeferredPass extends Effect {
         spotLight.bindGroup.ubos,
         spotLight.bindGroup.depthTexture,
       ],
-      presentationFormat: 'rgba16float',
+      presentationFormat: SETTINGS.qualityLevel.bloomToggle
+        ? 'rgba16float'
+        : 'bgra8unorm',
     })
 
     this.framebufferDescriptor = {

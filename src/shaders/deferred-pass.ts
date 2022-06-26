@@ -160,7 +160,7 @@ export const DeferredPassFragmentShader = `
 
 			Lo += SpotLightRadiance(spotLight, surface) * visibility;
 
-			let ambient = vec3(0.01) * albedo.rgb;
+			let ambient = vec3(0.09) * albedo.rgb;
 			let color = ambient + Lo;
 			output.color = vec4(color.rgb, 1.0);			
 

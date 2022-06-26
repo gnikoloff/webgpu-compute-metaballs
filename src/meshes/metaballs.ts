@@ -36,6 +36,10 @@ export class Metaballs {
     )
   }
 
+  public get hasUpdatedAtLeastOnce(): boolean {
+    return this.metaballsCompute.hasCalcedOnce
+  }
+
   constructor(
     private renderer: WebGPURenderer,
     volume: IVolumeSettings,

@@ -51,4 +51,5 @@ export interface QualityOption {
   shadowRes: number
   pointLightsCount: number
   outputScale: number
+  updateMetaballs: boolean
 }

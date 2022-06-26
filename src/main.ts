@@ -167,7 +167,12 @@ async function startDemo() {
 
   const deferredPass = new DeferredPass(renderer)
   const copyPass = new CopyPass(renderer)
-  const bloomPass = new BloomPass(renderer, copyPass)
+
+  let bloomPass: BloomPass
+
+  if (SETTINGS.qualityLevel.bloomToggle) {
+    bloomPass = new BloomPass(renderer, copyPass)
+  }
   const resultPass = new ResultPass(renderer, copyPass, bloomPass)
 
   const metaballs = new Metaballs(renderer, volume, deferredPass.spotLight)
@@ -195,6 +200,14 @@ async function startDemo() {
       ;(window as any).location = parser.href
     })
 
+  setInterval(() => {
+    const commandEncoder = renderer.device.createCommandEncoder()
+
+    // ## Run compute shaders
+    const computePass = commandEncoder.beginComputePass()
+    metaballs.updateSim(computePass, performance.now() / 1000, 0.0167)
+    computePass.end()
+  }, 2000)
   setInterval(rearrange, 5000)
   addEventListener('focus', onWindowFocus)
   addEventListener('blur', onWindowBlur)
@@ -257,9 +270,18 @@ async function startDemo() {
 
     // ## Run compute shaders
     const computePass = commandEncoder.beginComputePass()
-    metaballs.updateSim(computePass, time, dt)
+    if (SETTINGS.qualityLevel.updateMetaballs) {
+      metaballs.updateSim(computePass, time, dt)
+    } else {
+      if (!metaballs.hasUpdatedAtLeastOnce) {
+        metaballs.updateSim(computePass, time, dt)
+      }
+    }
+
     deferredPass.updateLightsSim(computePass, time, dt)
-    bloomPass.updateBloom(computePass)
+    if (bloomPass) {
+      bloomPass.updateBloom(computePass)
+    }
     computePass.end()
 
     // ## Render scene from spot light POV
@@ -283,35 +305,47 @@ async function startDemo() {
 
     gBufferPass.end()
 
-    // ## Copy pass
-    const copyRenderPass = commandEncoder.beginRenderPass({
-      ...copyPass.framebufferDescriptor,
-      label: 'copy pass',
-    })
-
-    deferredPass.render(copyRenderPass)
-
-    copyRenderPass.end()
-
     // ## Bloom pass
-    const bloomRenderPass = commandEncoder.beginRenderPass({
-      ...bloomPass.framebufferDescriptor,
-      label: 'bloom pass',
-    })
+    if (SETTINGS.qualityLevel.bloomToggle) {
+      // ## Copy pass
+      const copyRenderPass = commandEncoder.beginRenderPass({
+        ...copyPass.framebufferDescriptor,
+        label: 'copy pass',
+      })
 
-    bloomPass.render(bloomRenderPass)
+      deferredPass.render(copyRenderPass)
 
-    bloomRenderPass.end()
+      copyRenderPass.end()
 
-    // ## Final composite pass
-    const renderPass = commandEncoder.beginRenderPass({
-      label: 'draw default framebuffer',
-      colorAttachments: [renderer.colorAttachment],
-    })
+      const bloomRenderPass = commandEncoder.beginRenderPass({
+        ...bloomPass.framebufferDescriptor,
+        label: 'bloom pass',
+      })
 
-    resultPass.render(renderPass)
+      bloomPass.render(bloomRenderPass)
 
-    renderPass.end()
+      bloomRenderPass.end()
+
+      // ## Final composite pass
+      const renderPass = commandEncoder.beginRenderPass({
+        label: 'draw default framebuffer',
+        colorAttachments: [renderer.colorAttachment],
+      })
+
+      resultPass.render(renderPass)
+
+      renderPass.end()
+    } else {
+      // ## Final composite pass
+      const renderPass = commandEncoder.beginRenderPass({
+        label: 'draw default framebuffer',
+        colorAttachments: [renderer.colorAttachment],
+      })
+
+      deferredPass.render(renderPass)
+
+      renderPass.end()
+    }
 
     renderer.device.queue.submit([commandEncoder.finish()])
   }
