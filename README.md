@@ -1,5 +1,5 @@
 # WebGPU Compute Metaballs
 
-WebGPU demo featuring a marching cubes and bloom post-processing via compute shaders, physically based shading, deferred rendering, gamma correction and shadow mapping.
+![Demo screenshot preview](https://github.com/gnikoloff/webgpu-compute-metaballs/blob/master/preview.png?raw=true)
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/5aBFOyCNakw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+WebGPU demo featuring marching cubes and bloom post-processing via compute shaders, physically based shading, deferred rendering, gamma correction and shadow mapping.
