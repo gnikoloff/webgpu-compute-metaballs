@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vite --host --https",
-    "build": "tsc && vite build && touch ./docs/.nojekyll",
+    "build": "tsc && IS_BUILD=true vite build && touch ./docs/.nojekyll",
     "preview": "vite preview"
   },
   "devDependencies": {
