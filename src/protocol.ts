@@ -39,3 +39,16 @@ export interface ISpotLight {
   outerCutOff?: number
   intensity?: number
 }
+
+export enum QualitySettings {
+  LOW = 0,
+  MEDIUM = 1,
+  HIGH = 2,
+}
+
+export interface QualityOption {
+  bloomToggle: boolean
+  shadowRes: number
+  pointLightsCount: number
+  outputScale: number
+}

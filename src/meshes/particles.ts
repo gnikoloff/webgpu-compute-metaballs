@@ -5,14 +5,13 @@ import {
   ParticlesVertexShader,
 } from '../shaders/particles'
 import { WebGPURenderer } from '../webgpu-renderer'
+import { SETTINGS } from '../settings'
 
 export class Particles {
   private renderPipeline: GPURenderPipeline
 
   private bindGroupLayout: GPUBindGroupLayout
   private bindGroup: GPUBindGroup
-
-  private instanceCount = PointLights.MAX_LIGHTS_COUNT
 
   constructor(
     private renderer: WebGPURenderer,
@@ -95,6 +94,6 @@ export class Particles {
     renderPass.setPipeline(this.renderPipeline)
     renderPass.setBindGroup(0, this.renderer.bindGroups.frame)
     renderPass.setBindGroup(1, this.bindGroup)
-    renderPass.drawIndexed(6, this.instanceCount)
+    renderPass.drawIndexed(6, SETTINGS.qualityLevel.pointLightsCount)
   }
 }

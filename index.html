@@ -27,7 +27,6 @@
         margin-top: 0;
         margin-bottom: 2rem;
         font-size: 1.4rem;
-        text-align: center;
       }
       p {
         color: rgba(255, 255, 255, 0.86);
@@ -35,7 +34,8 @@
       a {
         color: inherit;
       }
-      #chrome-warning {
+      #chrome-warning,
+      #quality-chooser {
         position: fixed;
         top: 0;
         right: 0;
@@ -44,10 +44,47 @@
         background: #181818;
         overflow: auto;
       }
+      #chrome-warning {
+        z-index: 1;
+      }
+      #quality-chooser {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #quality-buttons-wrapper {
+        padding: 0;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #quality-buttons-wrapper li {
+        margin-right: 1rem;
+      }
+      #quality-buttons-wrapper button {
+        padding: 8px 26px;
+        background: none;
+        border: 1px solid white;
+        color: white;
+        cursor: pointer;
+        transition: color 0.12s ease,
+                    background 0.12s ease;
+      }
+      #quality-buttons-wrapper button:hover {
+        background: white;
+        color: black;
+      }
+      #quality-buttons-wrapper li:last-of-type {
+        margin-right: 0;
+      }
       #content-contianer {
         max-width: 700px;
         width: 100%;
         margin: 4rem auto;
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+        box-sizing: border-box;
       }
       #iframe-wrapper {
         position: relative;
@@ -93,7 +130,22 @@
         <p style="color: rgba(255, 255, 255, 0.6)">In the meantime, please enjoy this recorded video of the demo running realtime on a Mac Studio M1 Max.</p>
       </div>
     </div>
-    <div id="app"></div>
+    <div id="quality-chooser">
+      <div>
+        <p>Please choose graphics quality for the demo:</p>
+        <ul id="quality-buttons-wrapper">
+          <li>
+            <button data-quality="0">Low</button>
+          </li>
+          <li>
+            <button data-quality="1">Medium</button>
+          </li>
+          <li>
+            <button data-quality="2">High</button>
+          </li>
+        </ul>
+      </div>
+    </div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -1,9 +1,10 @@
 import { vec4 } from 'gl-matrix'
+import { SETTINGS } from '../settings'
 import { UpdatePointLightsComputeShader } from '../shaders/point-lights-compute'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class PointLights {
-  public static readonly MAX_LIGHTS_COUNT = 16
+  public static readonly MAX_LIGHTS_COUNT = 256
 
   private lightsBufferComputeBindGroupLayout: GPUBindGroupLayout
   private lightsBufferComputeBindGroup: GPUBindGroup
@@ -14,6 +15,14 @@ export class PointLights {
 
   public get isReady(): boolean {
     return !!this.updateComputePipeline
+  }
+
+  public set lightsCount(v: number) {
+    this.renderer.device.queue.writeBuffer(
+      this.lightsConfigUniformBuffer,
+      0,
+      new Uint32Array([v]),
+    )
   }
 
   constructor(private renderer: WebGPURenderer) {
@@ -78,7 +87,7 @@ export class PointLights {
     const lightsConfigArr = new Uint32Array(
       this.lightsConfigUniformBuffer.getMappedRange(),
     )
-    lightsConfigArr[0] = PointLights.MAX_LIGHTS_COUNT
+    lightsConfigArr[0] = SETTINGS.qualityLevel.pointLightsCount
     this.lightsConfigUniformBuffer.unmap()
 
     this.lightsBufferComputeBindGroupLayout =
@@ -147,7 +156,9 @@ export class PointLights {
     computePass.setPipeline(this.updateComputePipeline)
     computePass.setBindGroup(0, this.lightsBufferComputeBindGroup)
     computePass.setBindGroup(1, this.renderer.bindGroups.frame)
-    computePass.dispatchWorkgroups(Math.ceil(PointLights.MAX_LIGHTS_COUNT / 64))
+    computePass.dispatchWorkgroups(
+      Math.ceil(SETTINGS.qualityLevel.pointLightsCount / 64),
+    )
     return this
   }
 }

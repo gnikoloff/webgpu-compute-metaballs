@@ -5,12 +5,13 @@ import { SpotLight } from '../lighting/spot-light'
 import { CopyPass } from './copy-pass'
 import { BloomPassFragmentShader } from '../shaders/bloom-pass'
 import { BloomBlurCompute } from '../shaders/bloom-blur-compute'
+import SETTINGS from '../settings'
 
 export class BloomPass extends Effect {
   private static readonly TILE_DIM = 128
   private static readonly BATCH = [4, 4]
-  private static readonly FILTER_SIZE = 20
-  private static readonly ITERATIONS = 4
+  private static readonly FILTER_SIZE = 10
+  private static readonly ITERATIONS = 2
 
   public pointLights: PointLights
   public spotLight: SpotLight
@@ -304,8 +305,8 @@ export class BloomPass extends Effect {
     const renderer = this.renderer
     const blockDim = this.blockDim
     const batch = BloomPass.BATCH
-    const srcWidth = renderer.outputSize[0] * 0.2
-    const srcHeight = renderer.outputSize[1] * 0.2
+    const srcWidth = renderer.outputSize[0]
+    const srcHeight = renderer.outputSize[1]
     computePass.setPipeline(this.blurPipeline)
     computePass.setBindGroup(0, this.blurComputeConstantsBindGroup)
     computePass.setBindGroup(1, this.blurComputeBindGroup0)

@@ -21,7 +21,7 @@ export class DeferredPass extends Effect {
   constructor(renderer: WebGPURenderer) {
     const pointLights = new PointLights(renderer)
     const spotLight = new SpotLight(renderer, {
-      position: vec3.fromValues(10, 40, 1),
+      position: vec3.fromValues(0, 80, 1),
       direction: vec3.fromValues(0, 1.0, 0),
       color: vec3.fromValues(1, 1, 1),
       cutOff: deg2Rad(1),

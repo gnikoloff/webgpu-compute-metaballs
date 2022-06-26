@@ -2,11 +2,10 @@ import { vec3 } from 'gl-matrix'
 import { PerspectiveCamera } from '../camera/perspective-camera'
 import { deg2Rad } from '../helpers/deg-to-rad'
 import { ISpotLight } from '../protocol'
+import { SETTINGS } from '../settings'
 import { WebGPURenderer } from '../webgpu-renderer'
 
 export class SpotLight {
-  private static readonly SHADOWMAP_SIZE = 512
-
   private camera: PerspectiveCamera
 
   private _position: vec3
@@ -161,8 +160,8 @@ export class SpotLight {
     this.depthTexture = renderer.device.createTexture({
       label: 'spot light depth texture',
       size: {
-        width: SpotLight.SHADOWMAP_SIZE,
-        height: SpotLight.SHADOWMAP_SIZE,
+        width: SETTINGS.qualityLevel.shadowRes,
+        height: SETTINGS.qualityLevel.shadowRes,
       },
       format: 'depth32float',
       usage:
@@ -202,7 +201,10 @@ export class SpotLight {
     this.renderer.device.queue.writeBuffer(
       this.projectionUBO,
       32 * Float32Array.BYTES_PER_ELEMENT,
-      new Float32Array([SpotLight.SHADOWMAP_SIZE, SpotLight.SHADOWMAP_SIZE]),
+      new Float32Array([
+        SETTINGS.qualityLevel.shadowRes,
+        SETTINGS.qualityLevel.shadowRes,
+      ]),
     )
     this.renderer.device.queue.writeBuffer(
       this.projectionUBO,

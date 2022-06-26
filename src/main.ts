@@ -1,4 +1,6 @@
-import { IVolumeSettings } from './protocol'
+import * as dat from 'dat.gui'
+
+import { IVolumeSettings, QualityOption, QualitySettings } from './protocol'
 import { WebGPURenderer } from './webgpu-renderer'
 import { PerspectiveCamera } from './camera/perspective-camera'
 import { CameraController } from './camera/camera-controller'
@@ -12,6 +14,8 @@ import { BoxOutline } from './meshes/box-outline'
 import { Ground } from './meshes/ground'
 import { Particles } from './meshes/particles'
 import { getChromeVersion } from './helpers/get-chrome-version'
+import { SETTINGS } from './settings'
+import { PointLights } from './lighting/point-lights'
 // import { ShadowDebugger } from './debug/shadow-debugger'
 
 let oldTime = 0
@@ -28,33 +32,60 @@ function initApp() {
   if (!hasWebGPU) {
     showChromeOnlyWarning(true, false)
   }
-  startDemo()
+  const parser = new URL((window as any).location)
+  const qualityParam = parser.searchParams.get('quality')
+  const quality = parseInt(qualityParam, 10)
+  if (
+    quality === QualitySettings.LOW ||
+    quality === QualitySettings.MEDIUM ||
+    quality === QualitySettings.HIGH
+  ) {
+    const $qualityChooserWrapper = document.getElementById('quality-chooser')
+    $qualityChooserWrapper.parentNode.removeChild($qualityChooserWrapper)
+    SETTINGS.quality = quality
+    parser.searchParams.delete('quality')
+
+    window.history.pushState({}, '', parser)
+    startDemo()
+  } else {
+    initQualitySelectionUI()
+  }
 }
 
-function showChromeOnlyWarning(isChrome = false, hasWebGPU = true) {
-  const $warningWrapper = document.getElementById('chrome-warning')
-  const $nonChromeMessage = document.getElementById('non-chrome-text')
-  const $outdatedChromeMessage = document.getElementById('outdated-chrome-text')
+function initQualitySelectionUI() {
+  const $qualityChooserWrapper = document.getElementById('quality-chooser')
+  const $qualityButtonsWrapper = document.getElementById(
+    'quality-buttons-wrapper',
+  )
+  $qualityButtonsWrapper.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement
+    if (target.nodeName === 'BUTTON') {
+      const qualityAttrib = target.getAttribute('data-quality')
+      const quality = parseInt(qualityAttrib) as QualitySettings
+      SETTINGS.quality = quality
 
-  $warningWrapper.style.setProperty('display', 'block')
-
-  if (!isChrome) {
-    $nonChromeMessage.style.removeProperty('display')
-    throw new Error('Demo runs on up-to-date chromium browsers only!')
-  }
-  if (!hasWebGPU) {
-    $outdatedChromeMessage.style.removeProperty('display')
-    throw new Error('Demo runs on up-to-date chromium browsers only!')
-  }
+      startDemo()
+      $qualityChooserWrapper.parentNode.removeChild($qualityChooserWrapper)
+    }
+  })
 }
 
 async function startDemo() {
+  // initDATGui()
   const adapter = await navigator.gpu?.requestAdapter()
 
   if (!adapter) {
     //
     return
   }
+
+  const renderer = new WebGPURenderer(adapter)
+  renderer.devicePixelRatio = devicePixelRatio
+  renderer.outputSize = [
+    innerWidth * SETTINGS.qualityLevel.outputScale,
+    innerHeight * SETTINGS.qualityLevel.outputScale,
+  ]
+  document.body.appendChild(renderer.canvas)
 
   const perspCamera = new PerspectiveCamera(
     (45 * Math.PI) / 180,
@@ -65,12 +96,9 @@ async function startDemo() {
     .setPosition({ x: 10, y: 2, z: 16 })
     .lookAt({ x: 0, y: 0, z: 0 })
 
-  new CameraController(perspCamera, document.body, false, 0.1).lookAt([0, 1, 0])
-
-  const renderer = new WebGPURenderer(adapter)
-  renderer.devicePixelRatio = devicePixelRatio
-  renderer.outputSize = [innerWidth, innerHeight]
-  document.body.appendChild(renderer.canvas)
+  new CameraController(perspCamera, renderer.canvas, false, 0.1).lookAt([
+    0, 1, 0,
+  ])
 
   await renderer.init()
 
@@ -149,10 +177,23 @@ async function startDemo() {
     renderer,
     deferredPass.pointLights.lightsBuffer,
   )
-  // const spotLightShadowDebugger = new ShadowDebugger(
-  //   renderer,
-  //   deferredPass.spotLight,
-  // )
+
+  const gui = new dat.GUI()
+  const settings = SETTINGS.qualityLevel
+  gui
+    .add(settings, 'pointLightsCount', 0, PointLights.MAX_LIGHTS_COUNT, 1)
+    .listen()
+    .onChange((v: number) => {
+      deferredPass.pointLights.lightsCount = v
+    })
+  gui
+    .add(SETTINGS, 'quality', { Low: 0, Medium: 1, High: 2 })
+    .listen()
+    .onChange((v: number) => {
+      const parser = new URL((window as any).location)
+      parser.searchParams.set('quality', v.toString())
+      ;(window as any).location = parser.href
+    })
 
   setInterval(rearrange, 5000)
   addEventListener('focus', onWindowFocus)
@@ -273,5 +314,22 @@ async function startDemo() {
     renderPass.end()
 
     renderer.device.queue.submit([commandEncoder.finish()])
+  }
+}
+
+function showChromeOnlyWarning(isChrome = false, hasWebGPU = true) {
+  const $warningWrapper = document.getElementById('chrome-warning')
+  const $nonChromeMessage = document.getElementById('non-chrome-text')
+  const $outdatedChromeMessage = document.getElementById('outdated-chrome-text')
+
+  $warningWrapper.style.setProperty('display', 'block')
+
+  if (!isChrome) {
+    $nonChromeMessage.style.removeProperty('display')
+    throw new Error('Demo runs on up-to-date chromium browsers only!')
+  }
+  if (!hasWebGPU) {
+    $outdatedChromeMessage.style.removeProperty('display')
+    throw new Error('Demo runs on up-to-date chromium browsers only!')
   }
 }
