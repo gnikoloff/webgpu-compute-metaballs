@@ -37,9 +37,10 @@ a {
   overflow: auto;
 }
 #chrome-warning {
-  z-index: 1;
+  z-index: 2;
 }
 #quality-chooser {
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,4 +82,9 @@ a {
 #iframe-wrapper {
   position: relative;
   padding-bottom: 56.25%;
+}
+#github-link {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
 }
