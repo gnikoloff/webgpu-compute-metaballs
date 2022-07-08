@@ -200,14 +200,6 @@ async function startDemo() {
       ;(window as any).location = parser.href
     })
 
-  setInterval(() => {
-    const commandEncoder = renderer.device.createCommandEncoder()
-
-    // ## Run compute shaders
-    const computePass = commandEncoder.beginComputePass()
-    metaballs.updateSim(computePass, performance.now() / 1000, 0.0167)
-    computePass.end()
-  }, 2000)
   setInterval(rearrange, 5000)
   addEventListener('focus', onWindowFocus)
   addEventListener('blur', onWindowBlur)
