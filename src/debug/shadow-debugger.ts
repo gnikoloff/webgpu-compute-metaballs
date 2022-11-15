@@ -40,7 +40,7 @@ export class ShadowDebugger extends TextureDebuggerBase {
 
 			${LinearizeDepthSnippet}
 
-			@stage(fragment)
+			@fragment
 			fn main(input: Inputs) -> Output {
 				var depth = textureLoad(depthTexture, vec2<i32>(floor(input.coords.xy)), 0);
 				var output: Output;

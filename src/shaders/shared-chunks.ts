@@ -96,7 +96,7 @@ export const EffectVertexShader = `
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		output.position = vec4(input.position, 0.0, 1.0);
@@ -274,7 +274,7 @@ export const ReconstructWorldPosFromDepth = `
 
 // see http://chilliant.blogspot.com/2012/08/srgb-approximations-for-hlsl.html
 export const LinearToSRGB = `
-  let GAMMA = 2.2;
+  const GAMMA = 2.2;
   fn linearTosRGB(linear: vec3<f32>) -> vec3<f32> {
     let INV_GAMMA = 1.0 / GAMMA;
     return pow(linear, vec3<f32>(INV_GAMMA, INV_GAMMA, INV_GAMMA));
