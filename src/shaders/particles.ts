@@ -32,7 +32,7 @@ export const ParticlesVertexShader = `
 		vec2<f32>(1.0, 1.0)
 	);
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 
@@ -82,7 +82,7 @@ export const ParticlesFragmentShader = `
 		@location(1) albedo: vec4<f32>,	
 	}
 
-	@stage(fragment)
+	@fragment
 	fn main(input: Input) -> Output {
 		let dist = distance(input.uv, vec2(0.5), );
 		if (dist > 0.5) {

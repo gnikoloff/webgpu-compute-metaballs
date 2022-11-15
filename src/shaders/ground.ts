@@ -31,7 +31,7 @@ export const GroundVertexShader = `
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		let dist = distance(input.instanceOffset.xy, vec2(0.0));
@@ -66,7 +66,7 @@ export const GroundFragmentShader = `
 		@location(2) roughness: f32,
 	}
 	
-	@stage(fragment)
+	@fragment
 	fn main(input: Inputs) -> Output {
 		let normal = normalize(input.normal);
 		let albedo = vec3(1.0);
@@ -107,7 +107,7 @@ export const GroundShadowVertexShader = `
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		let dist = distance(input.instanceOffset.xy, vec2(0.0));

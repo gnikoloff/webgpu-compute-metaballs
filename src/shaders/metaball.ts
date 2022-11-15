@@ -54,7 +54,7 @@ export const MetaballFieldComputeSource = `
     return result;
   }
 
-  @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
+  @compute @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let position = positionAt(global_id);
     let valueIndex = global_id.x +
@@ -73,23 +73,23 @@ export const MarchingCubesComputeSource = `
   @group(0) @binding(0) var<storage> tables : Tables;
 
   ${IsosurfaceVolume}
-  @group(0) @binding(1) var<storage, write> volume : IsosurfaceVolume;
+  @group(0) @binding(1) var<storage, read_write> volume : IsosurfaceVolume;
 
   // Output buffers
   struct PositionBuffer {
     values : array<f32>,
   };
-  @group(0) @binding(2) var<storage, write> positionsOut : PositionBuffer;
+  @group(0) @binding(2) var<storage, read_write> positionsOut : PositionBuffer;
 
   struct NormalBuffer {
     values : array<f32>,
   };
-  @group(0) @binding(3) var<storage, write> normalsOut : NormalBuffer;
+  @group(0) @binding(3) var<storage, read_write> normalsOut : NormalBuffer;
 
   struct IndexBuffer {
     tris : array<u32>,
   };
-  @group(0) @binding(4) var<storage, write> indicesOut : IndexBuffer;
+  @group(0) @binding(4) var<storage, read_write> indicesOut : IndexBuffer;
 
   struct DrawIndirectArgs {
     vc : u32,
@@ -170,7 +170,7 @@ export const MarchingCubesComputeSource = `
     cubeVerts = cubeVerts + 1u;
   }
 
-  @stage(compute) @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
+  @compute @workgroup_size(${METABALLS_COMPUTE_WORKGROUP_SIZE[0]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[1]}, ${METABALLS_COMPUTE_WORKGROUP_SIZE[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     
     let i0 = global_id;
@@ -275,7 +275,7 @@ export const MetaballsVertexShader = `
       @builtin(position) position: vec4<f32>,
     }
 
-    @stage(vertex)
+    @vertex
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *
@@ -302,7 +302,7 @@ export const MetaballsFragmentShader = `
       @location(0) normal: vec3<f32>,
     }
 		
-    @stage(fragment)
+    @fragment
     fn main(input: Inputs) -> Output {
 			let normal = normalize(input.normal);
       let albedo = ubo.color;
@@ -334,7 +334,7 @@ export const MetaballsShadowVertexShader = `
       @builtin(position) position: vec4<f32>,
     }
 
-    @stage(vertex)
+    @vertex
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *

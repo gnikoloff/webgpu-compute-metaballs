@@ -12,7 +12,7 @@ export const ResultPassFragmentShader = `
     @location(0) color: vec4<f32>,
   }
 
-  @stage(fragment)
+  @fragment
   fn main(input: Inputs) -> Output {
     var output: Output;
     var hdrColor = textureLoad(

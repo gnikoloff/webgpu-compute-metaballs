@@ -53,8 +53,8 @@ export const DeferredPassFragmentShader = `
 		@location(0) color: vec4<f32>,
 	}
 
-	let PI = ${Math.PI};
-	let LOG2 = ${Math.LOG2E};
+	const PI = ${Math.PI};
+	const LOG2 = ${Math.LOG2E};
 	
 	${DistributionGGX}
 	${GeometrySmith}
@@ -64,7 +64,7 @@ export const DeferredPassFragmentShader = `
 	${LinearToSRGB}
 	${LinearizeDepthSnippet}
 
-	@stage(fragment)
+	@fragment
 	fn main(input: Inputs) -> Output {
 		// ## Reconstruct world position from depth buffer
 
