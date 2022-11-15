@@ -89,7 +89,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		output.position = vec4(input.position, 0.0, 1.0);
@@ -235,7 +235,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
     return worldPosition;
   }
 `,xe=`
-  let GAMMA = 2.2;
+  const GAMMA = 2.2;
   fn linearTosRGB(linear: vec3<f32>) -> vec3<f32> {
     let INV_GAMMA = 1.0 / GAMMA;
     return pow(linear, vec3<f32>(INV_GAMMA, INV_GAMMA, INV_GAMMA));
@@ -283,9 +283,9 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 
 	@group(1) @binding(1) var<uniform> view: ViewUniformsStruct;
 
-	let PI = ${Math.PI};
+	const PI = ${Math.PI};
 
-	@stage(compute) @workgroup_size(64, 1, 1)
+	@compute @workgroup_size(64, 1, 1)
 	fn main(@builtin(global_invocation_id) GlobalInvocationID : vec3<u32>) {
 		var index = GlobalInvocationID.x;
 		if (index >= config.numLights) {
@@ -351,8 +351,8 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@location(0) color: vec4<f32>,
 	}
 
-	let PI = ${Math.PI};
-	let LOG2 = ${Math.LOG2E};
+	const PI = ${Math.PI};
+	const LOG2 = ${Math.LOG2E};
 	
 	${Xe}
 	${je}
@@ -362,7 +362,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 	${xe}
 	${ke}
 
-	@stage(fragment)
+	@fragment
 	fn main(input: Inputs) -> Output {
 		// ## Reconstruct world position from depth buffer
 
@@ -489,7 +489,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
     @location(0) color: vec4<f32>,
   }
 
-  @stage(fragment)
+  @fragment
   fn main(input: Inputs) -> Output {
     var output: Output;
     let albedo = textureLoad(
@@ -523,13 +523,13 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 
   var<workgroup> tile : array<array<vec3<f32>, 128>, 4>;
 
-  @stage(compute) @workgroup_size(32, 1, 1)
+  @compute @workgroup_size(32, 1, 1)
   fn main(
     @builtin(workgroup_id) WorkGroupID : vec3<u32>,
     @builtin(local_invocation_id) LocalInvocationID : vec3<u32>
   ) {
     let filterOffset : u32 = (params.filterDim - 1u) / 2u;
-    let dims : vec2<i32> = textureDimensions(inputTex, 0);
+    let dims = vec2<i32>(textureDimensions(inputTex, 0));
 
     let baseIndex = vec2<i32>(
       WorkGroupID.xy * vec2<u32>(params.blockDim, 4u) +
@@ -582,7 +582,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
     @location(0) color: vec4<f32>,
   }
 
-  @stage(fragment)
+  @fragment
   fn main(input: Inputs) -> Output {
     var output: Output;
     let albedo = textureLoad(
@@ -605,7 +605,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
     @location(0) color: vec4<f32>,
   }
 
-  @stage(fragment)
+  @fragment
   fn main(input: Inputs) -> Output {
     var output: Output;
     var hdrColor = textureLoad(
@@ -672,7 +672,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
     return result;
   }
 
-  @stage(compute) @workgroup_size(${P[0]}, ${P[1]}, ${P[2]})
+  @compute @workgroup_size(${P[0]}, ${P[1]}, ${P[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     let position = positionAt(global_id);
     let valueIndex = global_id.x +
@@ -689,23 +689,23 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
   @group(0) @binding(0) var<storage> tables : Tables;
 
   ${Be}
-  @group(0) @binding(1) var<storage, write> volume : IsosurfaceVolume;
+  @group(0) @binding(1) var<storage, read_write> volume : IsosurfaceVolume;
 
   // Output buffers
   struct PositionBuffer {
     values : array<f32>,
   };
-  @group(0) @binding(2) var<storage, write> positionsOut : PositionBuffer;
+  @group(0) @binding(2) var<storage, read_write> positionsOut : PositionBuffer;
 
   struct NormalBuffer {
     values : array<f32>,
   };
-  @group(0) @binding(3) var<storage, write> normalsOut : NormalBuffer;
+  @group(0) @binding(3) var<storage, read_write> normalsOut : NormalBuffer;
 
   struct IndexBuffer {
     tris : array<u32>,
   };
-  @group(0) @binding(4) var<storage, write> indicesOut : IndexBuffer;
+  @group(0) @binding(4) var<storage, read_write> indicesOut : IndexBuffer;
 
   struct DrawIndirectArgs {
     vc : u32,
@@ -786,7 +786,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
     cubeVerts = cubeVerts + 1u;
   }
 
-  @stage(compute) @workgroup_size(${P[0]}, ${P[1]}, ${P[2]})
+  @compute @workgroup_size(${P[0]}, ${P[1]}, ${P[2]})
   fn main(@builtin(global_invocation_id) global_id : vec3<u32>) {
     
     let i0 = global_id;
@@ -889,7 +889,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
       @builtin(position) position: vec4<f32>,
     }
 
-    @stage(vertex)
+    @vertex
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *
@@ -914,7 +914,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
       @location(0) normal: vec3<f32>,
     }
 		
-    @stage(fragment)
+    @fragment
     fn main(input: Inputs) -> Output {
 			let normal = normalize(input.normal);
       let albedo = ubo.color;
@@ -944,7 +944,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
       @builtin(position) position: vec4<f32>,
     }
 
-    @stage(vertex)
+    @vertex
     fn main(input: Inputs) -> Output {
       var output: Output;
       output.position = projection.matrix *
@@ -973,7 +973,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@location(0) localPosition: vec3<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 
@@ -1004,7 +1004,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 	@group(0) @binding(0) var<uniform> projection : ProjectionUniformsStruct;
 	@group(0) @binding(1) var<uniform> view : ViewUniformsStruct;
 
-	@stage(fragment)
+	@fragment
 	fn main(input: Input) -> Output {
 		var output: Output;
 		let spacing = step(sin(input.localPosition.x * 10.0 + view.time * 2.0), 0.1);
@@ -1051,7 +1051,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		let dist = distance(input.instanceOffset.xy, vec2(0.0));
@@ -1084,7 +1084,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@location(2) roughness: f32,
 	}
 	
-	@stage(fragment)
+	@fragment
 	fn main(input: Inputs) -> Output {
 		let normal = normalize(input.normal);
 		let albedo = vec3(1.0);
@@ -1123,7 +1123,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@builtin(position) position: vec4<f32>,
 	}
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 		let dist = distance(input.instanceOffset.xy, vec2(0.0));
@@ -1172,7 +1172,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		vec2<f32>(1.0, 1.0)
 	);
 
-	@stage(vertex)
+	@vertex
 	fn main(input: Inputs) -> Output {
 		var output: Output;
 
@@ -1220,7 +1220,7 @@ var _e=Object.defineProperty,Le=Object.defineProperties;var Me=Object.getOwnProp
 		@location(1) albedo: vec4<f32>,	
 	}
 
-	@stage(fragment)
+	@fragment
 	fn main(input: Input) -> Output {
 		let dist = distance(input.uv, vec2(0.5), );
 		if (dist > 0.5) {
